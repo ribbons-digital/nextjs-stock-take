@@ -49,16 +49,16 @@ export default function UserForm({ isSignup }: PropTypes) {
     };
 
     // Send the form data to our forms API on Vercel and get a response.
-    const response = await fetch(endpoint, options);
+    await fetch(endpoint, options);
 
     // Get the response data from server as JSON.
     // If server returns the name submitted, that means the form works.
-    const result = (await response.json()) as LoginResType;
+    // const result = (await response.json()) as LoginResType;
 
-    if (result.status === 200) {
-      //   sessionStorage.setItem("token", result.data);
-      router.push("/success");
-    }
+    // if (result.status === 200) {
+    //   //   sessionStorage.setItem("token", result.data);
+    //   router.push("/success");
+    // }
   };
   return (
     <form onSubmit={handleSubmit}>

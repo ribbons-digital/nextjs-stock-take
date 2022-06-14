@@ -1,10 +1,18 @@
 import type { GetServerSideProps, NextPage } from "next";
+import Cookies from 'cookies'
 import Head from "next/head";
 import Image from "next/image";
 import { supabase } from "services/supabase";
 import styles from "../styles/Home.module.css";
+import { ApiError, User } from "@supabase/supabase-js";
 
-const Home: NextPage = () => {
+type PropTypes = {
+  user?: User;
+  error?: ApiError;
+}
+
+const Home: NextPage = ({user, error}: PropTypes) => {
+  console.log({user})
   return (
     <div className={styles.container}>
       <Head>
@@ -72,10 +80,11 @@ const Home: NextPage = () => {
 
 export default Home;
 
-export const getServerSideProps: GetServerSideProps = async ({ req }) => {
-  const { user } = await supabase.auth.api.getUserByCookie(req);
+export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
+const myCookies = new Cookies(req, res)
+  
 
-  if (!user) {
+  if (!req.cookies._session) {
     return {
       props: {},
       redirect: {
@@ -83,9 +92,34 @@ export const getServerSideProps: GetServerSideProps = async ({ req }) => {
         permanent: false,
       },
     };
+  } else {
+    const { user, error: sessionErr } = await supabase.auth.api.getUser(req.cookies._session);
+
+
+    if (!user) {
+      myCookies.set("_session")
+      return {
+        props: {},
+        redirect: {
+          destination: "/login",
+          permanent: false,
+        },
+      };
+    }
+    if (!sessionErr) {
+
+      supabase.auth.setAuth(req.cookies._session);
+
+      return {
+        props: { user },
+        
+      };
+    } else {
+      return {
+        props: { error: sessionErr },
+      }
+    }
+
   }
 
-  return {
-    props: { user },
-  };
 };
