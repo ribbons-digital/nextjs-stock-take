@@ -1,21 +1,14 @@
 import { supabase } from "services/supabase";
-import { withIronSessionApiRoute } from "iron-session/next";
 import type { NextApiRequest, NextApiResponse } from "next";
+import { withIronSessionApiRoute } from "iron-session/next";
 import { sessionOptions } from "lib/session";
-import { User } from "@supabase/gotrue-js";
+import { ResType } from "./login";
 
-export type ResType = {
-  token?: string | null;
-  status: number;
-  error?: string | null;
-  user?: User | null;
-};
+export default withIronSessionApiRoute(signUpRoute, sessionOptions);
 
-export default withIronSessionApiRoute(loginRoute, sessionOptions);
-
-async function loginRoute(req: NextApiRequest, res: NextApiResponse<ResType>) {
+async function signUpRoute(req: NextApiRequest, res: NextApiResponse<ResType>) {
   const { email, password } = req.body;
-  const { user, error, session } = await supabase.auth.signIn({
+  const { user, error, session } = await supabase.auth.signUp({
     email,
     password,
   });

@@ -1,7 +1,7 @@
 import type { SanityDocumentStub } from "@sanity/client";
-import type { CreateItemParamsType, ItemType } from "~/types";
+import type { CreateItemParamsType } from "../../types";
 
-import { sanity } from "../utils/sanity-client";
+import { sanity } from "../../lib/sanity-client";
 
 export const getItems = async () => {
   const query =

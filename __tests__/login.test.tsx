@@ -1,9 +1,63 @@
+import "whatwg-fetch";
 import userEvent from "@testing-library/user-event";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import LoginPage from "../pages/login";
 import { ReactElement } from "react";
 import React from "react";
+import { rest } from "msw";
+import { setupServer } from "msw/node";
+import { useRouter } from "next/router";
+
 import Link from "next/link";
+
+const server = setupServer(
+  rest.post("/api/login", (req, res, ctx) => {
+    return res(
+      ctx.json({
+        status: 200,
+        data: "token",
+        user: {
+          id: "f2ec2c12-aac8-4f40-be89-f6a642edd756",
+          aud: "authenticated",
+          role: "authenticated",
+          email: "just.shiang@gmail.com",
+          email_confirmed_at: "2022-06-01T05:37:45.690931Z",
+          phone: "",
+          confirmation_sent_at: "2022-06-01T05:37:22.038811Z",
+          confirmed_at: "2022-06-01T05:37:45.690931Z",
+          last_sign_in_at: "2022-06-14T08:15:42.550584722Z",
+          app_metadata: {
+            provider: "email",
+            providers: ["email"],
+          },
+          user_metadata: {},
+          identities: [
+            {
+              id: "f2ec2c12-aac8-4f40-be89-f6a642edd756",
+              user_id: "f2ec2c12-aac8-4f40-be89-f6a642edd756",
+              identity_data: {
+                sub: "f2ec2c12-aac8-4f40-be89-f6a642edd756",
+              },
+              provider: "email",
+              last_sign_in_at: "2022-06-01T05:37:22.035059Z",
+              created_at: "2022-06-01T05:37:22.035111Z",
+              updated_at: "2022-06-01T05:37:22.035115Z",
+            },
+          ],
+          created_at: "2022-06-01T05:37:22.005321Z",
+          updated_at: "2022-06-14T08:15:42.55173Z",
+        },
+      })
+    );
+  })
+);
+
+beforeAll(() => server.listen());
+afterAll(() => server.close());
+// beforeEach(() => jest.resetAllMocks());
+afterEach(() => {
+  server.resetHandlers();
+});
 
 // jest.mock(
 //   "next/link",
@@ -11,6 +65,27 @@ import Link from "next/link";
 //     ({ children, ...rest }: { children: ReactElement }) =>
 //       React.cloneElement(children, { ...rest })
 // );
+
+const mockedUseRouterReturnValue = {
+  query: {},
+  pathname: "/",
+  asPath: "/",
+  events: {
+    emit: jest.fn(),
+    on: jest.fn(),
+    off: jest.fn(),
+  },
+  push: jest.fn(() => Promise.resolve(true)),
+  prefetch: jest.fn(() => Promise.resolve()),
+  reload: jest.fn(() => Promise.resolve(true)),
+  replace: jest.fn(() => Promise.resolve(true)),
+  back: jest.fn(() => Promise.resolve(true)),
+};
+
+jest.mock("next/router", () => ({
+  useRouter: () => mockedUseRouterReturnValue,
+}));
+
 jest.mock(
   "next/link",
   () =>
@@ -85,6 +160,10 @@ describe("Login Page", () => {
               name="email"
               type="email"
             />
+            <p
+              class="text-red-600"
+              role="alert"
+            />
           </div>
           <div
             class="flex items-start flex-col w-1/2 mt-2"
@@ -101,6 +180,10 @@ describe("Login Page", () => {
               id="password"
               name="password"
               type="password"
+            />
+            <p
+              class="text-red-600"
+              role="alert"
             />
           </div>
           <div
@@ -131,20 +214,58 @@ describe("Login Page", () => {
     `);
   });
 
-  //   test("The Login page - clicking on sign up button should go to Sign Up page", async () => {
-  //     const user = userEvent.setup();
+  test("Successful login should go to the home page", async () => {
+    const user = userEvent.setup();
+    const router = useRouter();
 
-  //     const { debug } = render(<LoginPage />);
-  //     const signUpBtn = screen.getByRole("button", { name: /sign up/i });
+    render(<LoginPage />);
+    const emailInput = screen.getByLabelText(/email/i);
+    const passwordInput = screen.getByLabelText(/password/i);
 
-  //     await user.click(signUpBtn);
+    const loginBtn = screen.getByRole("button", { name: /log in/i });
 
-  //     // expect(signUpBtn).toHaveBeenCalled();
-  //     expect(screen.getByText(/sign up/i).closest("link")).toHaveAttribute(
-  //       "href",
-  //       "/signup"
-  //     );
-  //     // const loginText = getByText(/already have an account/i);
-  //     // expect(loginText).toBeInTheDocument();
-  //   });
+    await user.type(emailInput, "just.shiang@gmail.com");
+    await user.type(passwordInput, "Q1w2e3r4t5");
+    user.click(loginBtn);
+    await waitFor(() => {
+      expect(router.push).toHaveBeenCalledTimes(1);
+      expect(router.push).toHaveBeenCalledWith("/");
+    });
+  });
+
+  test("Submitting an empty form should display correct errors", async () => {
+    const user = userEvent.setup();
+    render(<LoginPage />);
+    const loginBtn = screen.getByRole("button", { name: /log in/i });
+    user.click(loginBtn);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/please enter a valid email/i)
+      ).toBeInTheDocument();
+      expect(screen.getByText(/please enter a password/i)).toBeInTheDocument();
+    });
+  });
+
+  test("Submitting the form with invalid input format should display the correct error or not submit the form", async () => {
+    const user = userEvent.setup();
+    const router = useRouter();
+
+    render(<LoginPage />);
+    const emailInput = screen.getByLabelText(/email/i);
+    const passwordInput = screen.getByLabelText(/password/i);
+
+    const loginBtn = screen.getByRole("button", { name: /log in/i });
+
+    await user.type(emailInput, "just");
+    user.click(loginBtn);
+    await waitFor(() => {
+      expect(router.push).toHaveBeenCalledTimes(1);
+    });
+    await user.type(passwordInput, "www");
+    user.click(loginBtn);
+    await waitFor(() => {
+      expect(screen.getByText(/6 characters/i)).toBeInTheDocument();
+    });
+  });
 });

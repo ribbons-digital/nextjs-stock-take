@@ -5,9 +5,9 @@ import type {
   OrdersInProductResponseType,
   ProductType,
   UpdateProductOrdersParamsType,
-} from "~/types";
+} from "../../types";
 
-import { sanity } from "../utils/sanity-client";
+import { sanity } from "../../lib/sanity-client";
 
 export const getProducts = async () => {
   // const query =
