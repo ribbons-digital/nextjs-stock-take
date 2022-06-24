@@ -11,23 +11,44 @@ import {
 import { withIronSessionSsr } from "iron-session/next";
 import { sessionOptions } from "lib/session";
 import type { NextPage } from "next";
-import Link from "next/link";
-import { getProducts } from "services/sanity/product";
+import { useRouter } from "next/router";
+import { useQuery } from "react-query";
 import { ProductType } from "types";
+import { ProductsResType } from "./api/products";
 
-type PropTypes = {
-  products: ProductType[];
-};
+const Products: NextPage = () => {
+  const router = useRouter();
+  const { data, error, isLoading } = useQuery<ProductType[]>(
+    "products",
+    async () => {
+      const data = await fetch("http://localhost:3000/api/products");
+      if (!data.ok) {
+        throw new Error("Something went wrong");
+      }
 
-const Products: NextPage<PropTypes> = ({ products }) => {
+      const json = (await data.json()) as ProductsResType;
+      if (json.error) {
+        throw new Error(json.error);
+      }
+      return json.products;
+    }
+  );
+
+  if (isLoading) return <p>Loading...</p>;
+
+  if (error) return <p>Something went wrong</p>;
+
   return (
     <div className="flex flex-col container mx-auto max-w-4xl p-4">
       <div className="w-full flex justify-end mb-6">
-        <Link href="/products/new">
-          <Button type="button" variant="solid" colorScheme="twitter">
-            + Add New Product
-          </Button>
-        </Link>
+        <Button
+          type="button"
+          variant="solid"
+          colorScheme="twitter"
+          onClick={() => router.push("/products/new")}
+        >
+          + Add New Product
+        </Button>
       </div>
       <TableContainer>
         <Table variant="simple">
@@ -40,8 +61,8 @@ const Products: NextPage<PropTypes> = ({ products }) => {
             </Tr>
           </Thead>
           <Tbody>
-            {products.map((product, index) => (
-              <Product products={products} index={index} key={product._id} />
+            {data?.map((product, index) => (
+              <Product products={data} index={index} key={product._id} />
             ))}
           </Tbody>
         </Table>
@@ -52,10 +73,7 @@ const Products: NextPage<PropTypes> = ({ products }) => {
 
 export default Products;
 
-export const getServerSideProps = withIronSessionSsr(async function ({
-  req,
-  res,
-}) {
+export const getServerSideProps = withIronSessionSsr(function ({ req, res }) {
   const { user } = req.session;
 
   if (!user) {
@@ -67,12 +85,7 @@ export const getServerSideProps = withIronSessionSsr(async function ({
     };
   }
 
-  ('*[_type == "product"]{ _id, name, orders, items[]->{_id, quantity} }');
-
   return {
-    props: {
-      products: await getProducts(),
-    },
+    props: {},
   };
-},
-sessionOptions);
+}, sessionOptions);

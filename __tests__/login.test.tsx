@@ -1,14 +1,11 @@
-import "whatwg-fetch";
-import userEvent from "@testing-library/user-event";
 import { render, screen, waitFor } from "@testing-library/react";
-import LoginPage from "../pages/login";
-import { ReactElement } from "react";
-import React from "react";
+import userEvent from "@testing-library/user-event";
 import { rest } from "msw";
 import { setupServer } from "msw/node";
 import { useRouter } from "next/router";
-
-import Link from "next/link";
+import { ReactElement } from "react";
+import "whatwg-fetch";
+import LoginPage from "../pages/login";
 
 const server = setupServer(
   rest.post("/api/login", (req, res, ctx) => {

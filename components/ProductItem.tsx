@@ -8,7 +8,7 @@ export default function ProductItem({
   index,
   productId,
 }: {
-  items: ItemType[];
+  items: Omit<ItemType, "cost" | "inProduct">[];
   index: number;
   productId: string;
 }) {
@@ -17,7 +17,9 @@ export default function ProductItem({
 
   const deleteItemFromList = useMutation(
     ({ itemId }: { itemId: string }) => {
-      const index = items.findIndex((item: ItemType) => item._id === itemId);
+      const index = items.findIndex(
+        (item: Omit<ItemType, "cost" | "inProduct">) => item._id === itemId
+      );
       return deleteItemInProduct({ id: productId as string, index });
     },
     {

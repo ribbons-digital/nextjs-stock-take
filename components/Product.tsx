@@ -1,5 +1,4 @@
 import { Input, Td, Tr } from "@chakra-ui/react";
-import Link from "next/link";
 import { useRouter } from "next/router";
 import React from "react";
 import { useMutation, useQueryClient } from "react-query";
@@ -22,6 +21,15 @@ export default function Product({
     ({ id, qty }: { id: string; qty: number }) => {
       return updateProductItemsQuantity(id, qty);
     },
+    // async ({ id, qty }: { id: string; qty: number }) => {
+    //   return await fetch(`/api/products/${product._id}`, {
+    //     method: "POST",
+    //     headers: {
+    //       "Content-Type": "application/json",
+    //     },
+    //     body: JSON.stringify({ productId: id, quantity: qty }),
+    //   });
+    // },
     {
       onSuccess: () => queryClient.invalidateQueries(["products"]),
     }
@@ -29,20 +37,21 @@ export default function Product({
   return (
     <Tr key={product._id}>
       <Td>
-        <Link href={`/products/${product._id}`}>
-          <button
-            type="button"
-            className="underline underline-offset-1 text-blue-700"
-          >
-            {product.name}
-          </button>
-        </Link>
+        <button
+          type="button"
+          name={product.name}
+          className="underline underline-offset-1 text-blue-700"
+          onClick={() => router.push(`/products/${product._id}`)}
+        >
+          {product.name}
+        </button>
       </Td>
       <Td>
-        <label htmlFor={`item-quantity-${index}`} />
+        <label htmlFor={`quantity-input-${product.name}`} />
         <Input
-          id={`item-quantity-${index}`}
-          name={`item-quantity-${index}`}
+          id={`quantity-input-${product.name}`}
+          name={`quantity-input-${product.name}`}
+          data-testid={`quantity-input-${product.name}`}
           type="number"
           ref={inputRef}
           defaultValue={
@@ -74,7 +83,7 @@ export default function Product({
           <button
             className="rounded-full bg-blue-500 pl-3 pr-3 text-white text-center w-full"
             type="button"
-            name="update"
+            data-testid={`update-quantity-${product.name}`}
             onClick={() =>
               updateProductQuantityMutation.mutate({
                 id: product._id as string,

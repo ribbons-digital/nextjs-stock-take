@@ -2,10 +2,10 @@ import type { ApiError, User } from "@supabase/supabase-js";
 
 export type ProductType = {
   _id?: string;
-  _key?: string;
+  _key?: string | null;
   name: string;
-  items: ItemType[];
-  orders: OrderType[];
+  items: Omit<ItemType, "cost" | "inProduct">[];
+  orders: OrderType[] | null;
 };
 
 export type OrderType = {
@@ -38,10 +38,10 @@ export type OrdersInProductResponseType = {
 
 export type ItemType = {
   _id?: string;
-  _key?: string;
+  _key?: string | null;
   name: string;
   quantity: number;
-  cost: number;
+  cost: number | null;
   inProduct: Omit<ProductType, "items" | "orders">[];
 };
 

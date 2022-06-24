@@ -5,9 +5,12 @@ import type { AppProps } from "next/app";
 import { QueryClient, QueryClientProvider } from "react-query";
 import "../styles/globals.css";
 
+// if (process.env.NODE_ENV === "development" && global.process === undefined) {
+//   const { worker } = require("../mocks/browser");
+//   worker.start();
+// }
+const queryClient = new QueryClient();
 function MyApp({ Component, pageProps }: AppProps) {
-  const queryClient = new QueryClient();
-
   return (
     <QueryClientProvider client={queryClient}>
       <ProvideAuth>

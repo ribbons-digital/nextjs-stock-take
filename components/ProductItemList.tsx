@@ -18,7 +18,7 @@ import { ItemType } from "types";
 import ProductItem from "./ProductItem";
 
 type ProductItemListProps = {
-  currentProductItems: ItemType[];
+  currentProductItems: Omit<ItemType, "cost" | "inProduct">[];
   allProductItems: ItemType[];
   productId: string;
 };
@@ -28,7 +28,8 @@ export default function ProductItemList({
   allProductItems,
   productId,
 }: ProductItemListProps) {
-  const [items, setItems] = React.useState<ItemType[]>(currentProductItems);
+  const [items, setItems] =
+    React.useState<Omit<ItemType, "cost" | "inProduct">[]>(currentProductItems);
   const [selectedItemId, setSelectedItemId] = React.useState<string>("");
 
   const queryClient = useQueryClient();
@@ -61,13 +62,17 @@ export default function ProductItemList({
   return (
     <>
       <FormControl sx={{ py: 1, width: "100%" }}>
-        <FormLabel id="demo-simple-select-helper-label">Item</FormLabel>
+        <FormLabel id="demo-simple-select-helper-label" htmlFor="selected-item">
+          Item
+        </FormLabel>
         <Select
           id="selected-item"
           variant="outline"
           value={selectedItemId}
           onChange={handleSelectItem}
+          placeholder="Choose an item"
         >
+          <option></option>
           {allProductItems.map((item, i) => (
             <option value={item._id} key={item._id}>
               {item.name}
@@ -108,7 +113,12 @@ export default function ProductItemList({
             </Thead>
             <Tbody>
               {items.map((_, i) => (
-                <ProductItem items={items} index={i} productId={productId} />
+                <ProductItem
+                  items={items}
+                  index={i}
+                  productId={productId}
+                  key={i}
+                />
               ))}
             </Tbody>
           </Table>

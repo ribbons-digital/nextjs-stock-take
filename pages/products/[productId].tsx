@@ -1,24 +1,17 @@
 import type { GetServerSideProps, NextPage } from "next";
 
-import { sessionOptions } from "lib/session";
-import { withIronSessionSsr } from "iron-session/next";
-import { ItemType, ProductType } from "types";
-import { sanity } from "lib/sanity-client";
 import ProductForm from "@/components/ProductForm";
-import { ParsedUrlQuery } from "querystring";
+import { withIronSessionSsr } from "iron-session/next";
+import { sessionOptions } from "lib/session";
 import { useRouter } from "next/router";
-import { getProduct } from "services/sanity/product";
 import { useQuery } from "react-query";
 import { getItems } from "services/sanity/item";
+import { getProduct } from "services/sanity/product";
+import { ItemType, ProductType } from "types";
 
 type PropTypes = {
-  product: ProductType;
-  items: ItemType[];
+  children: React.ReactNode;
 };
-
-interface QParams extends ParsedUrlQuery {
-  productId: string;
-}
 
 const Product: NextPage<PropTypes> = () => {
   const router = useRouter();
@@ -40,7 +33,10 @@ const Product: NextPage<PropTypes> = () => {
     data![0].items && data![0].items.length > 0
       ? items?.filter(
           (item: ItemType) =>
-            !data![0].items.some((pItem: ItemType) => pItem._id === item._id)
+            !data![0].items.some(
+              (pItem: Omit<ItemType, "cost" | "inProduct">) =>
+                pItem._id === item._id
+            )
         )
       : items;
 
