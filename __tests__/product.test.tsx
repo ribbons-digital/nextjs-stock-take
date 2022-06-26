@@ -1,16 +1,25 @@
 import ProductForm from "@/components/ProductForm";
 import { userEvent } from "@storybook/testing-library";
 import {
+  act,
   render,
   screen,
+  waitFor,
   waitForElementToBeRemoved,
 } from "@testing-library/react";
-import { items, product0 } from "mocks/db";
+import { items, mockedNewProduct, product0 } from "mocks/db";
+import { useRouter } from "next/router";
 import NewProduct from "pages/products/new";
 import Product from "pages/products/[productId]";
 import { QueryClient, QueryClientProvider } from "react-query";
 import { getItems } from "services/sanity/item";
-import { getProduct } from "services/sanity/product";
+import {
+  addItemInProduct,
+  createProduct,
+  deleteItemInProduct,
+  getProduct,
+  updateProduct,
+} from "services/sanity/product";
 import "whatwg-fetch";
 import { server } from "../mocks/server";
 
@@ -36,6 +45,19 @@ jest.mock("../services/sanity/item");
 jest.mock("../services/sanity/product");
 const mockGetItems = getItems as jest.MockedFunction<typeof getItems>;
 const mockGetProduct = getProduct as jest.MockedFunction<typeof getProduct>;
+const mockCreateProduct = createProduct as jest.MockedFunction<
+  typeof createProduct
+>;
+const mockUpdateProduct = updateProduct as jest.MockedFunction<
+  typeof updateProduct
+>;
+const mockAddItemInProduct = addItemInProduct as jest.MockedFunction<
+  typeof addItemInProduct
+>;
+
+const mockDeleteItemInProduct = deleteItemInProduct as jest.MockedFunction<
+  typeof deleteItemInProduct
+>;
 
 const mockedUseRouterReturnValue = {
   query: {},
@@ -59,9 +81,17 @@ jest.mock("next/router", () => ({
 
 describe("Product page", () => {
   test("it should load the form correctly - New Product Form", async () => {
+    // arrange
     const queryClient = new QueryClient();
+    const router = useRouter();
+
+    // arrange - mocking api calls
     mockGetItems.mockResolvedValueOnce(items);
-    const { container } = render(
+    // @ts-ignore
+    mockCreateProduct.mockReturnValueOnce(mockedNewProduct);
+
+    // arrange - render UI
+    const { container, rerender } = render(
       <QueryClientProvider client={queryClient}>
         <NewProduct>
           <ProductForm items={items} />
@@ -71,11 +101,34 @@ describe("Product page", () => {
 
     await waitForElementToBeRemoved(screen.getByText(/loading/i));
 
-    await screen.findByRole("button", { name: /go back/i });
-    await screen.findByRole("button", { name: /add/i });
-    await screen.findByLabelText(/product name/i);
+    const backBtn = await screen.findByRole("button", { name: /go back/i });
+    const addBtn = await screen.findByRole("button", { name: /add/i });
+    const productNameInput = await screen.findByLabelText(/product name/i);
 
+    // act - click on back btn
+    userEvent.click(backBtn);
+    expect(router.back).toBeCalledTimes(1);
+
+    // act - click on add btn
+    userEvent.click(addBtn);
+    expect(mockCreateProduct).toBeCalledTimes(0);
+
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <NewProduct>
+          <ProductForm items={items} />
+        </NewProduct>
+      </QueryClientProvider>
+    );
+    // assert - add without enter product name - error msg
+    expect(
+      await screen.findByText(/please enter a product name/i)
+    ).toBeInTheDocument();
+
+    // assert - expect api to be called
     expect(mockGetItems).toBeCalledTimes(1);
+
+    // snapshot
     expect(container.firstChild).toMatchInlineSnapshot(`
       .emotion-1 {
         display: -webkit-inline-box;
@@ -139,6 +192,7 @@ describe("Product page", () => {
           </div>
           <label
             class="chakra-form__label emotion-3"
+            data-focus=""
             for="product-name"
             id="field-:r0:-label"
           >
@@ -154,14 +208,58 @@ describe("Product page", () => {
           <p
             class="text-red-600"
             role="alert"
-          />
+          >
+            Please enter a product name
+          </p>
         </div>
       </form>
     `);
   });
 
+  test("it should function correctly - New Product Form", async () => {
+    // arrange
+    const queryClient = new QueryClient();
+    const router = useRouter();
+
+    // arrange - mocking api calls
+    mockGetItems.mockResolvedValueOnce(items);
+    // @ts-ignore
+    mockCreateProduct.mockReturnValueOnce(mockedNewProduct);
+
+    // arrange - render UI
+    render(
+      <QueryClientProvider client={queryClient}>
+        <NewProduct>
+          <ProductForm items={items} />
+        </NewProduct>
+      </QueryClientProvider>
+    );
+
+    await waitForElementToBeRemoved(screen.getByText(/loading/i));
+
+    const addBtn = await screen.findByRole("button", { name: /add/i });
+    const productNameInput = await screen.findByLabelText(/product name/i);
+
+    userEvent.type(productNameInput, "haven tent - forest green");
+
+    expect(productNameInput).toHaveValue("haven tent - forest green");
+    await act(async () => userEvent.click(addBtn));
+
+    await waitFor(() => {
+      expect(mockCreateProduct).toBeCalledWith({
+        name: "haven tent - forest green",
+      });
+      expect(mockCreateProduct).toBeCalledTimes(1);
+      expect(router.push).toHaveBeenCalledTimes(1);
+      expect(router.push).toHaveBeenCalledWith(
+        `/products/${mockedNewProduct._id}`
+      );
+    });
+  });
+
   test("it should load the form correctly - Edit Product Form", async () => {
     const queryClient = new QueryClient();
+    const router = useRouter();
     mockGetItems.mockResolvedValueOnce(items);
     mockGetProduct.mockResolvedValueOnce(product0);
     const { container } = render(
@@ -174,7 +272,7 @@ describe("Product page", () => {
 
     await waitForElementToBeRemoved(screen.getByText(/loading/i));
 
-    await screen.findByRole("button", { name: /go back/i });
+    const backBtn = await screen.findByRole("button", { name: /go back/i });
     await screen.findByRole("button", { name: /update/i });
     const addItembtn = await screen.findByRole("button", { name: /add item/i });
     await screen.findByRole("button", { name: /delete/i });
@@ -189,6 +287,9 @@ describe("Product page", () => {
     screen.getByRole("cell", { name: /delete/i });
 
     expect(screen.getAllByRole("row").length).toBe(product0.length + 1);
+
+    userEvent.click(backBtn);
+    expect(router.back).toBeCalledTimes(1);
 
     expect(mockGetItems).toBeCalledTimes(1);
     expect(mockGetProduct).toBeCalledTimes(1);
@@ -324,7 +425,7 @@ describe("Product page", () => {
           <label
             class="chakra-form__label emotion-3"
             for="product-name"
-            id="field-:r1:-label"
+            id="field-:r2:-label"
           >
             Product Name
           </label>
@@ -511,5 +612,89 @@ describe("Product page", () => {
         </div>
       </form>
     `);
+  });
+
+  test("Edit product name should work correctly", async () => {
+    const queryClient = new QueryClient();
+
+    mockGetItems.mockResolvedValueOnce(items);
+    mockGetProduct.mockResolvedValueOnce(product0);
+
+    // @ts-ignore
+    mockUpdateProduct.mockResolvedValueOnce();
+    render(
+      <QueryClientProvider client={queryClient}>
+        <Product>
+          <ProductForm items={items} product={product0[0]} />
+        </Product>
+      </QueryClientProvider>
+    );
+
+    await waitForElementToBeRemoved(screen.getByText(/loading/i));
+
+    const updateBtn = await screen.findByRole("button", { name: /update/i });
+
+    const productNameInput = await screen.findByLabelText(/product name/i);
+    expect(productNameInput).toHaveValue(product0[0].name);
+
+    userEvent.clear(productNameInput);
+    userEvent.type(productNameInput, "Omnia Oven 2.0");
+    await act(async () => userEvent.click(updateBtn));
+
+    await waitFor(() => {
+      expect(mockUpdateProduct).toHaveBeenCalledTimes(1);
+      expect(mockUpdateProduct).toHaveBeenCalledWith({
+        id: product0[0]._id,
+        name: "Omnia Oven 2.0",
+      });
+    });
+  });
+
+  test("Add new item to a product should work correctly", async () => {
+    const queryClient = new QueryClient();
+
+    mockGetItems.mockResolvedValueOnce(items);
+    mockGetProduct.mockResolvedValueOnce(product0);
+
+    // @ts-ignore
+    mockAddItemInProduct.mockResolvedValueOnce();
+    // @ts-ignore
+    mockDeleteItemInProduct.mockRejectedValueOnce();
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <Product>
+          <ProductForm items={items} product={product0[0]} />
+        </Product>
+      </QueryClientProvider>
+    );
+
+    await waitForElementToBeRemoved(screen.getByText(/loading/i));
+
+    const updateBtn = await screen.findByRole("button", { name: /update/i });
+    const deleteBtn = await screen.findByRole("button", { name: /delete/i });
+
+    const productNameInput = await screen.findByLabelText(/product name/i);
+    expect(productNameInput).toHaveValue(product0[0].name);
+
+    userEvent.clear(productNameInput);
+    userEvent.type(productNameInput, "Omnia Oven 2.0");
+    await act(async () => userEvent.click(updateBtn));
+
+    await waitFor(() => {
+      expect(mockUpdateProduct).toHaveBeenCalledTimes(1);
+      expect(mockUpdateProduct).toHaveBeenCalledWith({
+        id: product0[0]._id,
+        name: "Omnia Oven 2.0",
+      });
+    });
+    await act(async () => userEvent.click(deleteBtn));
+    await waitFor(() => {
+      expect(mockDeleteItemInProduct).toHaveBeenCalledTimes(1);
+      expect(mockDeleteItemInProduct).toHaveBeenCalledWith({
+        id: product0[0]._id,
+        index: 0,
+      });
+    });
   });
 });

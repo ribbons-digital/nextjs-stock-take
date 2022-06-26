@@ -359,6 +359,15 @@ export const product0 = [
   },
 ];
 
+export const mockedNewProduct = {
+  _createdAt: "2022-06-24T22:38:14Z",
+  _id: "yhyI8h1QSgFaZW7Ar1hwGx",
+  _rev: "yhyI8h1QSgFaZW7Ar1hwCt",
+  _type: "product",
+  _updatedAt: "2022-06-24T22:38:14Z",
+  name: "Haven Tent - Forest Green",
+};
+
 // export const productsDb = factory({
 //   product: {
 //     _id: primaryKey(String),

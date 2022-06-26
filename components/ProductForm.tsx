@@ -31,7 +31,7 @@ export default function ProductForm({ product, items }: ProductFormProps) {
 
   const productMutation = useMutation(
     async (productName: string) => {
-      const isCreate = router.pathname.includes("new");
+      const isCreate = !product?._id;
       if (isCreate) {
         return await createProduct({
           name: productName,
@@ -80,7 +80,7 @@ export default function ProductForm({ product, items }: ProductFormProps) {
           id="product-name"
           type="text"
           {...register("productName", {
-            required: "Please enter a valid email address",
+            required: "Please enter a product name",
           })}
           defaultValue={product?.name}
           sx={{ py: 1 }}
