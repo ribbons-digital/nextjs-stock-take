@@ -1,11 +1,7 @@
 import type { SanityDocumentStub } from "@sanity/client";
-import type {
-  CreateOrderParamsType,
-  OrderResponseType,
-  UpdateOrderParamsType,
-} from "~/types";
+import type { CreateOrderParamsType, UpdateOrderParamsType } from "../../types";
 
-import { sanity } from "../utils/sanity-client";
+import { sanity } from "../../lib/sanity-client";
 
 export const getOrders = async () => {
   const query =
@@ -13,7 +9,7 @@ export const getOrders = async () => {
   return await sanity.fetch(query);
 };
 
-export const getOrder = async (id: string): Promise<OrderResponseType[]> => {
+export const getOrder = async ({ id }: { id: string }) => {
   const query = `*[_type == "order" && _id == "${id}"]{ _id, _key, orderNumber, orderedItems[]{ _id, orderedItem->{_id, name}, quantity, note } , date}`;
   return await sanity.fetch(query);
 };
@@ -46,4 +42,9 @@ export const updateOrder = async ({
     .patch(orderId)
     .set({ orderedItems, date, orderNumber })
     .commit({ autoGenerateArrayKeys: true });
+};
+
+export const deleteOrder = async ({ id }: { id: string }) => {
+  if (!id) return { error: "Please provide object with id key" };
+  return await sanity.delete(id);
 };

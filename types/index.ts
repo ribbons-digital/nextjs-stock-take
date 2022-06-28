@@ -10,7 +10,7 @@ export type ProductType = {
 
 export type OrderType = {
   _id?: string;
-  _key?: string;
+  _key?: string | null;
   orderNumber: string;
   orderedItems: OrderItemType[];
   date: string;
@@ -46,11 +46,14 @@ export type ItemType = {
 };
 
 export type OrderItemType = {
-  _id?: string;
+  _id?: string | null;
   _key?: string;
-  orderedItem: ProductType;
+  orderedItem: {
+    _id: string;
+    name: string;
+  };
   quantity: number;
-  note?: string;
+  note?: string | null;
 };
 
 export type OrderItemParamsType = {

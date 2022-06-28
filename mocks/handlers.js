@@ -1,9 +1,12 @@
 import { rest } from "msw";
-import { products } from "./db";
+import { mockOrders, products } from "./db";
 
 export const handlers = [
   rest.get("/api/products", (req, res, ctx) => {
     return res(ctx.json({ products }));
+  }),
+  rest.get("/api/orders", (req, res, ctx) => {
+    return res(ctx.json({ orders: mockOrders }));
   }),
   // rest.post("/api/products/:id", (req, res, ctx) => {
   //   const { id } = req.params;

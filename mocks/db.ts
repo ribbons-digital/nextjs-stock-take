@@ -368,6 +368,194 @@ export const mockedNewProduct = {
   name: "Haven Tent - Forest Green",
 };
 
+export const mockOrders = [
+  {
+    _id: "GR3T9gaCNB67uk7J6arsRq",
+    _key: null,
+    date: "2022-05-29",
+    orderNumber: "1212",
+    orderedItems: [
+      {
+        orderedItem: {
+          _id: "5333771d-e70e-441d-9079-9d39940f289f",
+          name: "Omnia Mega Kit",
+        },
+        quantity: 2,
+      },
+      {
+        orderedItem: {
+          _id: "5333771d-e70e-441d-9079-9d39940f289f",
+          name: "Omnia Mega Kit",
+        },
+        quantity: -1,
+      },
+    ],
+  },
+  {
+    _id: "GR3T9gaCNB67uk7J6cK95t",
+    _key: null,
+    date: "2022-05-30",
+    orderNumber: "12111",
+    orderedItems: [
+      {
+        orderedItem: {
+          _id: "I0y6V1x7qzC608VKmhttV4",
+          name: "Omnia Mould Duo",
+        },
+        quantity: 1,
+      },
+    ],
+  },
+  {
+    _id: "GR3T9gaCNB67uk7J6cLCbk",
+    _key: null,
+    date: "2022-05-30",
+    orderNumber: "11122",
+    orderedItems: [
+      {
+        orderedItem: {
+          _id: "4ff5e92d-c0b6-4dec-af57-d87ece9f9770",
+          name: "Omnia Potholder",
+        },
+        quantity: 2,
+      },
+      {
+        orderedItem: {
+          _id: "4ff5e92d-c0b6-4dec-af57-d87ece9f9770",
+          name: "Omnia Potholder",
+        },
+        quantity: -1,
+      },
+    ],
+  },
+  {
+    _id: "GR3T9gaCNB67uk7J6eF5IH",
+    _key: null,
+    date: "2022-05-18",
+    orderNumber: "4434",
+    orderedItems: [
+      {
+        orderedItem: {
+          _id: "4ff5e92d-c0b6-4dec-af57-d87ece9f9770",
+          name: "Omnia Potholder",
+        },
+        quantity: 3,
+      },
+    ],
+  },
+  {
+    _id: "I0y6V1x7qzC608VKmlHL78",
+    _key: null,
+    date: "2022-05-31",
+    orderNumber: "44343",
+    orderedItems: [
+      {
+        orderedItem: {
+          _id: "I0y6V1x7qzC608VKmhtenS",
+          name: "Omnia Muffin Ring",
+        },
+        quantity: 2,
+      },
+      {
+        orderedItem: {
+          _id: "I0y6V1x7qzC608VKmhtenS",
+          name: "Omnia Muffin Ring",
+        },
+        quantity: -1,
+      },
+    ],
+  },
+  {
+    _id: "zz074YFsjUbDP9RwQZSY2N",
+    _key: null,
+    date: "2022-05-29",
+    orderNumber: "1213",
+    orderedItems: [
+      {
+        orderedItem: {
+          _id: "4ff5e92d-c0b6-4dec-af57-d87ece9f9770",
+          name: "Omnia Potholder",
+        },
+        quantity: 1,
+      },
+    ],
+  },
+  {
+    _id: "zz074YFsjUbDP9RwQZSaEF",
+    _key: null,
+    date: "2022-05-30",
+    orderNumber: "1111",
+    orderedItems: [
+      {
+        orderedItem: {
+          _id: "I0y6V1x7qzC608VKmhtenS",
+          name: "Omnia Muffin Ring",
+        },
+        quantity: 1,
+      },
+    ],
+  },
+  {
+    _id: "zz074YFsjUbDP9RwQaQyLn",
+    _key: null,
+    date: "2022-05-25",
+    orderNumber: "2344",
+    orderedItems: [
+      {
+        orderedItem: {
+          _id: "4ff5e92d-c0b6-4dec-af57-d87ece9f9770",
+          name: "Omnia Potholder",
+        },
+        quantity: 4,
+      },
+    ],
+  },
+];
+
+export const mockedNewOrder = {
+  _createdAt: "2022-06-26T23:50:05Z",
+  _id: "1zLL0gbc2w959Fb41gDG2O",
+  _rev: "1zLL0gbc2w959Fb41gDG1W",
+  _type: "order",
+  _updatedAt: "2022-06-26T23:50:05Z",
+  date: "2022-06-27",
+  orderNumber: "01124",
+  orderedItems: [
+    {
+      _key: "1zLL0gbc2w959Fb41gDG48",
+      orderedItem: { _ref: "1zLL0gbc2w959Fb41PWlT2", _type: "reference" },
+      quantity: 1,
+    },
+  ],
+};
+
+export const mockOrder3 = {
+  _id: "GR3T9gaCNB67uk7J6arsRq",
+  _key: null,
+  date: "2022-05-29",
+  orderNumber: "1212",
+  orderedItems: [
+    {
+      _id: null,
+      note: null,
+      orderedItem: {
+        _id: "5333771d-e70e-441d-9079-9d39940f289f",
+        name: "Omnia Mega Kit",
+      },
+      quantity: 2,
+    },
+    {
+      _id: null,
+      note: "Customer returned one unit",
+      orderedItem: {
+        _id: "5333771d-e70e-441d-9079-9d39940f289f",
+        name: "Omnia Mega Kit",
+      },
+      quantity: -1,
+    },
+  ],
+};
+
 // export const productsDb = factory({
 //   product: {
 //     _id: primaryKey(String),
