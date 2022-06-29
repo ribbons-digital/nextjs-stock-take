@@ -266,7 +266,7 @@ export default function OrderForm({ products, order }: OrderFormProps) {
               <FormLabel htmlFor="product-label">Product</FormLabel>
               <Select
                 id="product-label"
-                value={selectedProductId}
+                // value={selectedProductId}
                 onChange={handleSelectProduct}
               >
                 {products.map((product, i) => (
