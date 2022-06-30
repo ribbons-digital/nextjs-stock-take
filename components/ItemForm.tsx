@@ -1,5 +1,6 @@
-import { Button, Input, Select } from "@chakra-ui/react";
+import { Button, Checkbox, Input, Select, Stack } from "@chakra-ui/react";
 import { useRouter } from "next/router";
+import products from "pages/api/products";
 import React from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "react-query";
@@ -8,6 +9,7 @@ import {
   addItemInProduct,
   createProduct,
   getProducts,
+  removeItemsInProduct,
 } from "services/sanity/product";
 import { ItemType } from "types";
 
@@ -27,6 +29,13 @@ type NestedFormData = {
 
 export default function ItemForm({ item }: ItemFormProps) {
   const [selectedProducts, setSelectedProducts] = React.useState<string[]>([]);
+
+  React.useEffect(() => {
+    if (item) {
+      const productIds = item.inProduct.map((product) => product._id);
+      setSelectedProducts(productIds as string[]);
+    }
+  }, []);
   const {
     handleSubmit,
     register,
@@ -99,7 +108,36 @@ export default function ItemForm({ item }: ItemFormProps) {
       });
     },
     {
-      onSuccess: () => {
+      onSuccess: async (data) => {
+        const toRemove = item?.inProduct
+          .filter((pr) => !selectedProducts.includes(pr._id as string))
+          .map((productOfItem) => productOfItem._id);
+        const toAdd = selectedProducts.filter(
+          (pr) => !item?.inProduct.map((p) => p._id).includes(pr)
+        );
+        if (toRemove && toRemove?.length > 0) {
+          await Promise.all(
+            toRemove.map(async (product) => {
+              await removeItemsInProduct({
+                id: product as string,
+                items: [`items[_id==${item?._id}]`],
+              });
+            })
+          );
+        }
+        await Promise.all(
+          toAdd.map(async (product) => {
+            await addItemInProduct({
+              id: product,
+              itemRef: [
+                {
+                  _type: "reference",
+                  _ref: item?._id as string,
+                },
+              ],
+            });
+          })
+        );
         router.push("/items");
       },
     }
@@ -129,12 +167,19 @@ export default function ItemForm({ item }: ItemFormProps) {
     createProductMutation.mutate(nestedFormData.productName);
   });
 
-  const onSelectProducts = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const products = Array.from(
-      e.target.selectedOptions,
-      (option) => option.value
-    );
-    setSelectedProducts(products);
+  const onSelectProducts = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const index = selectedProducts.indexOf(e.target.value);
+    if (index > -1) {
+      const updatedProducts = selectedProducts.filter((p, i) => i !== index);
+      setSelectedProducts(updatedProducts);
+    } else {
+      setSelectedProducts([...selectedProducts, e.target.value]);
+    }
+    // const products = Array.from(
+    //   e.target.selectedOptions,
+    //   (option) => option.value
+    // );
+    // setSelectedProducts(products);
   };
 
   return (
@@ -145,7 +190,8 @@ export default function ItemForm({ item }: ItemFormProps) {
             Go back
           </Button>
           <div>
-            {(createItemMutaiton.isIdle || updateItemMutaiton.isIdle) && (
+            {(!createItemMutaiton.isLoading ||
+              !updateItemMutaiton.isLoading) && (
               <Button
                 variant="solid"
                 colorScheme="twitter"
@@ -268,57 +314,86 @@ export default function ItemForm({ item }: ItemFormProps) {
           </Stack>
         </RadioGroup> */}
 
-        <>
-          <label htmlFor="select-existing-products" className="my-2">
-            Select existing products:
-          </label>
-          {(isLoading || createProductMutation.isLoading) && (
-            <div>Fetching products...</div>
-          )}
-          {error && <p>Something is wrong...</p>}
-          {data && !createProductMutation.isLoading && (
-            <Select
-              id="select-existing-products"
-              sx={{ height: "8rem" }}
-              multiple
-              className="border-2"
-              onChange={onSelectProducts}
-            >
-              {data.map((product) => (
-                <option key={product._id} value={product._id}>
-                  {product.name}
-                </option>
-              ))}
-            </Select>
-          )}
+        <div className="px-2">
+          <>
+            <label htmlFor="select-existing-products" className="my-2">
+              Select existing products:
+            </label>
+            {(isLoading || createProductMutation.isLoading) && (
+              <div>Fetching products...</div>
+            )}
+            {error && <p>Something is wrong...</p>}
+            {data && !createProductMutation.isLoading && (
+              <Stack
+                spacing={5}
+                direction="column"
+                sx={{
+                  height: "12rem",
+                  overflow: "scroll",
+                  border: "1px",
+                  p: 2,
+                  borderColor: "gray",
+                }}
+              >
+                {data.map((product) => (
+                  <Checkbox
+                    key={product._id}
+                    value={product._id}
+                    name={product.name}
+                    onChange={onSelectProducts}
+                    isChecked={selectedProducts.some((p) => p === product._id)}
+                  >
+                    {product.name}
+                  </Checkbox>
+                  // <option key={product._id} value={product._id} selected={selectedProducts.some(p => p === product._id)}>
+                  //   {product.name}
+                  // </option>
+                ))}
+              </Stack>
+              // <Select
+              //   id="select-existing-products"
+              //   sx={{ height: "8rem" }}
+              //   multiple
+              //   className="border-2"
+              //   onChange={onSelectProducts}
 
-          <label htmlFor="add-new-product" className="my-2">
-            Add a new product:
-          </label>
-          <div className="flex item-center">
-            <div className="flex flex-col w-full">
-              <Input
-                id="add-new-product"
-                type="text"
-                {...nestedRegister("productName", {
-                  required: "Please enter a product name",
-                })}
-                sx={{ py: 1 }}
-              />
-              <p className="text-red-600" role="alert">
-                {nestedErrors.productName && nestedErrors.productName.message}
-              </p>
+              // >
+              //   {data.map((product) => (
+              //     <option key={product._id} value={product._id} selected={selectedProducts.some(p => p === product._id)}>
+              //       {product.name}
+              //     </option>
+              //   ))}
+              // </Select>
+            )}
+
+            <label htmlFor="add-new-product" className="my-2">
+              Add a new product:
+            </label>
+            <div className="flex item-center">
+              <div className="flex flex-col w-full">
+                <Input
+                  id="add-new-product"
+                  type="text"
+                  {...nestedRegister("productName", {
+                    required: "Please enter a product name",
+                  })}
+                  sx={{ py: 1 }}
+                />
+                <p className="text-red-600" role="alert">
+                  {nestedErrors.productName && nestedErrors.productName.message}
+                </p>
+              </div>
+              <Button
+                type="button"
+                onClick={onAddProduct}
+                disabled={!isDirty}
+                sx={{ ml: 4 }}
+              >
+                {createProductMutation.isLoading ? "Add..." : "Add Product"}
+              </Button>
             </div>
-            <Button
-              type="button"
-              onClick={onAddProduct}
-              disabled={!isDirty}
-              sx={{ ml: 4 }}
-            >
-              {createProductMutation.isLoading ? "Add..." : "Add Product"}
-            </Button>
-          </div>
-        </>
+          </>
+        </div>
 
         <label htmlFor="costPerItem" className="text-xl font-bold mt-8">
           Cost:
