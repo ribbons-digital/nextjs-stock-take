@@ -139,13 +139,3 @@ export const addItemInProduct = async ({
     .append("items", itemRef)
     .commit({ autoGenerateArrayKeys: true });
 };
-
-export const removeItemsInProduct = async ({
-  id,
-  items,
-}: {
-  id: string;
-  items: string[];
-}) => {
-  await sanity.patch(id).unset(items).commit();
-};

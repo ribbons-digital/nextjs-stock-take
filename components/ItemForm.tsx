@@ -1,6 +1,5 @@
-import { Button, Checkbox, Input, Select, Stack } from "@chakra-ui/react";
+import { Button, Checkbox, Input, Stack } from "@chakra-ui/react";
 import { useRouter } from "next/router";
-import products from "pages/api/products";
 import React from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "react-query";
@@ -8,10 +7,10 @@ import { createItem, updateItem } from "services/sanity/item";
 import {
   addItemInProduct,
   createProduct,
+  deleteItemInProduct,
   getProducts,
-  removeItemsInProduct,
 } from "services/sanity/product";
-import { ItemType } from "types";
+import { ItemType, ProductType } from "types";
 
 type ItemFormProps = {
   item?: ItemType;
@@ -52,7 +51,7 @@ export default function ItemForm({ item }: ItemFormProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const { data, error, isLoading } = useQuery<ItemType[]>("products", () =>
+  const { data, error, isLoading } = useQuery<ProductType[]>("products", () =>
     getProducts()
   );
 
@@ -108,36 +107,39 @@ export default function ItemForm({ item }: ItemFormProps) {
       });
     },
     {
-      onSuccess: async (data) => {
-        const toRemove = item?.inProduct
-          .filter((pr) => !selectedProducts.includes(pr._id as string))
-          .map((productOfItem) => productOfItem._id);
-        const toAdd = selectedProducts.filter(
-          (pr) => !item?.inProduct.map((p) => p._id).includes(pr)
+      onSuccess: async () => {
+        const original = item?.inProduct.map((product) => product._id);
+        const toRemoveFrom = original?.filter(
+          (it) => !selectedProducts.includes(it as string)
         );
-        if (toRemove && toRemove?.length > 0) {
+        const toAddTo = selectedProducts.filter(
+          (it) => !original?.includes(it)
+        );
+
+        if (toRemoveFrom && toRemoveFrom?.length > 0) {
           await Promise.all(
-            toRemove.map(async (product) => {
-              await removeItemsInProduct({
+            toRemoveFrom.map(async (product) => {
+              const prod = data?.find((p) => p._id === product);
+              const index = prod?.items.findIndex((it) => it._id === item?._id);
+              await deleteItemInProduct({
                 id: product as string,
-                items: [`items[_id==${item?._id}]`],
+                index: index as number,
               });
             })
           );
         }
-        await Promise.all(
-          toAdd.map(async (product) => {
-            await addItemInProduct({
-              id: product,
-              itemRef: [
-                {
-                  _type: "reference",
-                  _ref: item?._id as string,
-                },
-              ],
-            });
-          })
-        );
+
+        toAddTo.map(async (product) => {
+          await addItemInProduct({
+            id: product,
+            itemRef: [
+              {
+                _type: "reference",
+                _ref: item?._id as string,
+              },
+            ],
+          });
+        });
         router.push("/items");
       },
     }
