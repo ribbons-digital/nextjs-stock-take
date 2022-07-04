@@ -1,7 +1,6 @@
 import ProductForm from "@/components/ProductForm";
 import { userEvent } from "@storybook/testing-library";
 import {
-  act,
   render,
   screen,
   waitFor,
@@ -106,11 +105,11 @@ describe("Product page", () => {
     const productNameInput = await screen.findByLabelText(/product name/i);
 
     // act - click on back btn
-    userEvent.click(backBtn);
+    await userEvent.click(backBtn);
     expect(router.back).toBeCalledTimes(1);
 
     // act - click on add btn
-    userEvent.click(addBtn);
+    await userEvent.click(addBtn);
     expect(mockCreateProduct).toBeCalledTimes(0);
 
     rerender(
@@ -243,7 +242,7 @@ describe("Product page", () => {
     userEvent.type(productNameInput, "haven tent - forest green");
 
     expect(productNameInput).toHaveValue("haven tent - forest green");
-    await act(async () => userEvent.click(addBtn));
+    userEvent.click(addBtn);
 
     await waitFor(() => {
       expect(mockCreateProduct).toBeCalledWith({
@@ -639,7 +638,7 @@ describe("Product page", () => {
 
     userEvent.clear(productNameInput);
     userEvent.type(productNameInput, "Omnia Oven 2.0");
-    await act(async () => userEvent.click(updateBtn));
+    userEvent.click(updateBtn);
 
     await waitFor(() => {
       expect(mockUpdateProduct).toHaveBeenCalledTimes(1);
@@ -656,10 +655,8 @@ describe("Product page", () => {
     mockGetItems.mockResolvedValueOnce(items);
     mockGetProduct.mockResolvedValueOnce(product0);
 
-    // @ts-ignore
     mockAddItemInProduct.mockResolvedValueOnce();
-    // @ts-ignore
-    mockDeleteItemInProduct.mockRejectedValueOnce();
+    mockDeleteItemInProduct.mockResolvedValueOnce();
 
     render(
       <QueryClientProvider client={queryClient}>
@@ -679,7 +676,7 @@ describe("Product page", () => {
 
     userEvent.clear(productNameInput);
     userEvent.type(productNameInput, "Omnia Oven 2.0");
-    await act(async () => userEvent.click(updateBtn));
+    userEvent.click(updateBtn);
 
     await waitFor(() => {
       expect(mockUpdateProduct).toHaveBeenCalledTimes(1);
@@ -688,7 +685,7 @@ describe("Product page", () => {
         name: "Omnia Oven 2.0",
       });
     });
-    await act(async () => userEvent.click(deleteBtn));
+    userEvent.click(deleteBtn);
     await waitFor(() => {
       expect(mockDeleteItemInProduct).toHaveBeenCalledTimes(1);
       expect(mockDeleteItemInProduct).toHaveBeenCalledWith({

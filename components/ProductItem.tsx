@@ -25,7 +25,7 @@ export default function ProductItem({
     {
       onSuccess: () => {
         queryClient.invalidateQueries(["product", productId]);
-        queryClient.invalidateQueries(["items"]);
+        // queryClient.invalidateQueries(["items"]);
       },
     }
   );

@@ -14,11 +14,13 @@ import { ItemType, ProductType } from "types";
 
 type ItemFormProps = {
   item?: ItemType;
+  inProducts?: string[];
 };
 
 type FormData = {
   itemName: string;
   quantity: string;
+  inProducts: string[];
   costPerItem: string;
 };
 
@@ -26,15 +28,11 @@ type NestedFormData = {
   productName: string;
 };
 
-export default function ItemForm({ item }: ItemFormProps) {
-  const [selectedProducts, setSelectedProducts] = React.useState<string[]>([]);
+export default function ItemForm({ item, inProducts }: ItemFormProps) {
+  const [selectedProducts, setSelectedProducts] = React.useState<string[]>(
+    item ? (inProducts as string[]) : []
+  );
 
-  React.useEffect(() => {
-    if (item) {
-      const productIds = item.inProduct.map((product) => product._id);
-      setSelectedProducts(productIds as string[]);
-    }
-  }, []);
   const {
     handleSubmit,
     register,
@@ -70,7 +68,11 @@ export default function ItemForm({ item }: ItemFormProps) {
   );
 
   const createItemMutaiton = useMutation(
-    async ({ itemName, quantity, costPerItem }: FormData) => {
+    async ({
+      itemName,
+      quantity,
+      costPerItem,
+    }: Omit<FormData, "inProducts">) => {
       return await createItem({
         name: itemName,
         quantity,
@@ -98,7 +100,11 @@ export default function ItemForm({ item }: ItemFormProps) {
   );
 
   const updateItemMutaiton = useMutation(
-    async ({ itemName, quantity, costPerItem }: FormData) => {
+    async ({
+      itemName,
+      quantity,
+      costPerItem,
+    }: Omit<FormData, "inProducts">) => {
       return await updateItem({
         id: item?._id as string,
         name: itemName,
@@ -145,15 +151,17 @@ export default function ItemForm({ item }: ItemFormProps) {
     }
   );
 
-  const onCreateItem = handleSubmit(async (formData: FormData) => {
-    const { itemName, quantity, costPerItem } = formData;
+  const onCreateItem = handleSubmit(
+    async (formData: Omit<FormData, "inProducts">) => {
+      const { itemName, quantity, costPerItem } = formData;
 
-    createItemMutaiton.mutate({
-      itemName,
-      quantity,
-      costPerItem,
-    });
-  });
+      createItemMutaiton.mutate({
+        itemName,
+        quantity,
+        costPerItem,
+      });
+    }
+  );
 
   const onUpdateItem = handleSubmit(async (formData: FormData) => {
     const { itemName, quantity, costPerItem } = formData;
@@ -192,18 +200,7 @@ export default function ItemForm({ item }: ItemFormProps) {
             Go back
           </Button>
           <div>
-            {(!createItemMutaiton.isLoading ||
-              !updateItemMutaiton.isLoading) && (
-              <Button
-                variant="solid"
-                colorScheme="twitter"
-                type="button"
-                onClick={item ? onUpdateItem : onCreateItem}
-              >
-                {item ? "Update" : "Add"}
-              </Button>
-            )}
-            {(createItemMutaiton.isLoading || updateItemMutaiton.isLoading) && (
+            {createItemMutaiton.isLoading || updateItemMutaiton.isLoading ? (
               <Button
                 variant="solid"
                 colorScheme="twitter"
@@ -212,7 +209,16 @@ export default function ItemForm({ item }: ItemFormProps) {
                   createItemMutaiton.isLoading || updateItemMutaiton.isLoading
                 }
               >
-                {item ? "Updating..." : "Adding..."}
+                {item ? "Updating..." : "Creating..."}
+              </Button>
+            ) : (
+              <Button
+                variant="solid"
+                colorScheme="twitter"
+                type="button"
+                onClick={item ? onUpdateItem : onCreateItem}
+              >
+                {item ? "Update" : "Create"}
               </Button>
             )}
           </div>
@@ -257,7 +263,7 @@ export default function ItemForm({ item }: ItemFormProps) {
           </p>
         ) : null}
 
-        <label className="text-xl font-bold mt-8 mb-4">In Product:</label>
+        <div className="text-xl font-bold mt-8 mb-4">In Product:</div>
         {/* <RadioGroup sx={{ p: 4 }} onChange={setValue} value={value}>
           <Stack spacing={5} direction="column">
             <>
@@ -327,6 +333,7 @@ export default function ItemForm({ item }: ItemFormProps) {
             {error && <p>Something is wrong...</p>}
             {data && !createProductMutation.isLoading && (
               <Stack
+                id="select-existing-products"
                 spacing={5}
                 direction="column"
                 sx={{
@@ -341,9 +348,11 @@ export default function ItemForm({ item }: ItemFormProps) {
                   <Checkbox
                     key={product._id}
                     value={product._id}
-                    name={product.name}
-                    onChange={onSelectProducts}
-                    isChecked={selectedProducts.some((p) => p === product._id)}
+                    {...register("inProducts", {
+                      onChange: onSelectProducts,
+                      required: true,
+                    })}
+                    isChecked={selectedProducts.includes(product._id as string)}
                   >
                     {product.name}
                   </Checkbox>
@@ -352,6 +361,7 @@ export default function ItemForm({ item }: ItemFormProps) {
                   // </option>
                 ))}
               </Stack>
+
               // <Select
               //   id="select-existing-products"
               //   sx={{ height: "8rem" }}
@@ -367,6 +377,11 @@ export default function ItemForm({ item }: ItemFormProps) {
               //   ))}
               // </Select>
             )}
+            {errors.inProducts ? (
+              <p className="text-red-600" role="alert" id="order-date-error">
+                Please select one or more products
+              </p>
+            ) : null}
 
             <label htmlFor="add-new-product" className="my-2">
               Add a new product:

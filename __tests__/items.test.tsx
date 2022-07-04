@@ -1,5 +1,4 @@
 import {
-  act,
   render,
   screen,
   waitFor,
@@ -69,9 +68,7 @@ describe("Items", () => {
       </QueryClientProvider>
     );
 
-    await waitFor(() => {
-      expect(screen.getByText(/loading/i)).toBeInTheDocument();
-    });
+    await waitForElementToBeRemoved(() => screen.getByText(/loading/i));
   });
 
   test("it should render items", async () => {
@@ -103,7 +100,7 @@ describe("Items", () => {
       </QueryClientProvider>
     );
 
-    await waitForElementToBeRemoved(screen.getByText(/loading/i));
+    await waitForElementToBeRemoved(() => screen.getByText(/loading/i));
 
     screen.getByRole("columnheader", { name: /item name/i });
     screen.getByRole("columnheader", { name: /quantity/i });
@@ -112,9 +109,9 @@ describe("Items", () => {
     const updateBtns = screen.getAllByRole("button", { name: /update/i });
 
     expect(qtyInputs[0]).toHaveValue(2);
-    userEvent.clear(qtyInputs[0]);
-    userEvent.type(qtyInputs[0], "3");
-    await act(async () => userEvent.click(updateBtns[0]));
+    await userEvent.clear(qtyInputs[0]);
+    await userEvent.type(qtyInputs[0], "3");
+    await userEvent.click(updateBtns[0]);
     await waitFor(() => {
       expect(qtyInputs[0]).toHaveValue(3);
       expect(mockUpdateItemQty).toHaveBeenCalled();
@@ -533,12 +530,12 @@ describe("Items", () => {
       </QueryClientProvider>
     );
 
-    await waitForElementToBeRemoved(screen.getByText(/loading/i));
+    await waitForElementToBeRemoved(() => screen.getByText(/loading/i));
 
     const addNewItemBtn = await screen.findByRole("button", {
       name: /add new item/i,
     });
-    userEvent.click(addNewItemBtn);
+    await userEvent.click(addNewItemBtn);
 
     await waitFor(() => {
       expect(router.push).toHaveBeenCalledTimes(1);
@@ -559,7 +556,7 @@ describe("Items", () => {
     await waitForElementToBeRemoved(screen.getByText(/loading/i));
 
     const itemBtn = screen.getByRole("button", { name: mockItems[7].name });
-    userEvent.click(itemBtn);
+    await userEvent.click(itemBtn);
 
     await waitFor(() => {
       expect(router.push).toHaveBeenCalledTimes(1);

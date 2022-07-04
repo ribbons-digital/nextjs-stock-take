@@ -1,5 +1,4 @@
 import {
-  act,
   render,
   screen,
   waitFor,
@@ -109,7 +108,7 @@ describe("Products", () => {
 
     await userEvent.clear(quantityInput);
     await userEvent.type(quantityInput, "2");
-    await act(async () => userEvent.click(quantityUpdatebutton));
+    await userEvent.click(quantityUpdatebutton);
 
     await waitFor(() => {
       expect(mockedUpdateQuantity).toHaveBeenCalledTimes(1);
@@ -132,7 +131,7 @@ describe("Products", () => {
     const product = await screen.findByRole("button", {
       name: products[0].name,
     });
-    await act(async () => userEvent.click(product));
+    await userEvent.click(product);
 
     await waitFor(() => {
       expect(router.push).toHaveBeenCalledTimes(1);
@@ -154,7 +153,7 @@ describe("Products", () => {
     const addNewProductBtn = await screen.findByRole("button", {
       name: /add new product/i,
     });
-    userEvent.click(addNewProductBtn);
+    await userEvent.click(addNewProductBtn);
     // await act(async () => userEvent.click(addNewProductBtn));
 
     await waitFor(() => {

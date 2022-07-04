@@ -1,6 +1,5 @@
 import ItemForm from "@/components/ItemForm";
 import {
-  act,
   render,
   screen,
   waitFor,
@@ -8,9 +7,11 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { mockItem, products } from "mocks/db";
+import { GetServerSidePropsContext } from "next";
 import { useRouter } from "next/router";
 import NewItem from "pages/items/new";
-import Item from "pages/items/[itemId]";
+import Item, { getServerSideProps } from "pages/items/[itemId]";
+import { ParsedUrlQuery } from "querystring";
 import { QueryClient, QueryClientProvider } from "react-query";
 import { createItem, getItem, updateItem } from "services/sanity/item";
 import { createProduct, getProducts } from "services/sanity/product";
@@ -66,7 +67,7 @@ jest.mock("next/router", () => ({
 }));
 
 describe("New Item and Edit Item pages", () => {
-  test.only("it should render the form correctly - New Item Form", async () => {
+  test("it should render the form correctly - New Item Form", async () => {
     mockGetProducts.mockResolvedValueOnce(products);
     // arrange
     const queryClient = new QueryClient();
@@ -84,8 +85,8 @@ describe("New Item and Edit Item pages", () => {
 
     await screen.findByLabelText(/item name/i);
     await screen.findByLabelText(/quantity/i);
-    await screen.findByLabelText(/in product/i);
-    await screen.findByRole("radiogroup");
+    await screen.findByText(/in product/i);
+    // await screen.findByRole("radiogroup");
     // const selectExistingRadioBtn = await screen.findByLabelText(
     //   /existing products/i
     // );
@@ -93,7 +94,9 @@ describe("New Item and Edit Item pages", () => {
     // const existingProductMultiSelect = await screen.findByTestId(
     //   "products-select"
     // );
-    const createNewProductInput = await screen.findByLabelText(/add new/i);
+    const createNewProductInput = await screen.findByLabelText(
+      /add a new product/i
+    );
     const addProductBtn = await screen.findByRole("button", {
       name: "Add Product",
     });
@@ -116,7 +119,7 @@ describe("New Item and Edit Item pages", () => {
     expect(screen.getByText(/enter a product name/i)).toBeVisible();
 
     await screen.findByLabelText(/cost/i);
-    await screen.findByRole("button", { name: "Add" });
+    await screen.findByRole("button", { name: /create/i });
     expect(container.firstChild).toMatchInlineSnapshot(`
       .emotion-0 {
         display: -webkit-inline-box;
@@ -153,10 +156,6 @@ describe("New Item and Edit Item pages", () => {
       }
 
       .emotion-4 {
-        padding: 4px;
-      }
-
-      .emotion-5 {
         display: -webkit-box;
         display: -webkit-flex;
         display: -ms-flexbox;
@@ -164,15 +163,34 @@ describe("New Item and Edit Item pages", () => {
         -webkit-flex-direction: column;
         -ms-flex-direction: column;
         flex-direction: column;
+        height: 12rem;
+        overflow: scroll;
+        border: 1px;
+        padding: 2px;
+        border-color: gray;
       }
 
-      .emotion-5>*:not(style)~*:not(style) {
+      .emotion-4>*:not(style)~*:not(style) {
         margin-top: 5px;
         -webkit-margin-end: 0px;
         margin-inline-end: 0px;
         margin-bottom: 0px;
         -webkit-margin-start: 0px;
         margin-inline-start: 0px;
+      }
+
+      .emotion-5 {
+        cursor: pointer;
+        display: -webkit-inline-box;
+        display: -webkit-inline-flex;
+        display: -ms-inline-flexbox;
+        display: inline-flex;
+        -webkit-align-items: center;
+        -webkit-box-align: center;
+        -ms-flex-align: center;
+        align-items: center;
+        vertical-align: top;
+        position: relative;
       }
 
       .emotion-6 {
@@ -184,90 +202,31 @@ describe("New Item and Edit Item pages", () => {
         -webkit-box-align: center;
         -ms-flex-align: center;
         align-items: center;
-        vertical-align: top;
-        cursor: pointer;
-        position: relative;
-      }
-
-      .emotion-7 {
-        display: -webkit-inline-box;
-        display: -webkit-inline-flex;
-        display: -ms-inline-flexbox;
-        display: inline-flex;
-        -webkit-align-items: center;
-        -webkit-box-align: center;
-        -ms-flex-align: center;
-        align-items: center;
         -webkit-box-pack: center;
         -ms-flex-pack: center;
         -webkit-justify-content: center;
         justify-content: center;
+        vertical-align: top;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
         -webkit-flex-shrink: 0;
         -ms-flex-negative: 0;
         flex-shrink: 0;
       }
 
-      .emotion-8 {
-        -webkit-user-select: none;
-        -moz-user-select: none;
-        -ms-user-select: none;
-        user-select: none;
+      .emotion-7 {
         -webkit-margin-start: 0.5rem;
         margin-inline-start: 0.5rem;
       }
 
-      .emotion-9 {
-        width: 100%;
-        height: -webkit-fit-content;
-        height: -moz-fit-content;
-        height: fit-content;
-        position: relative;
-      }
-
-      .emotion-10 {
-        -webkit-padding-end: 2rem;
-        padding-inline-end: 2rem;
-        height: 8rem;
-      }
-
-      .emotion-10:focus,
-      .emotion-10[data-focus] {
-        z-index: unset;
-      }
-
-      .emotion-11 {
-        position: absolute;
-        display: -webkit-inline-box;
-        display: -webkit-inline-flex;
-        display: -ms-inline-flexbox;
-        display: inline-flex;
-        -webkit-align-items: center;
-        -webkit-box-align: center;
-        -ms-flex-align: center;
-        align-items: center;
-        -webkit-box-pack: center;
-        -ms-flex-pack: center;
-        -webkit-justify-content: center;
-        justify-content: center;
-        pointer-events: none;
-        top: 50%;
-        -webkit-transform: translateY(-50%);
-        -moz-transform: translateY(-50%);
-        -ms-transform: translateY(-50%);
-        transform: translateY(-50%);
-      }
-
-      .emotion-15 {
-        display: block;
-        text-align: start;
-      }
-
-      .emotion-16 {
+      .emotion-38 {
         padding-top: 1px;
         padding-bottom: 1px;
       }
 
-      .emotion-17 {
+      .emotion-39 {
         display: -webkit-inline-box;
         display: -webkit-inline-flex;
         display: -ms-inline-flexbox;
@@ -314,7 +273,7 @@ describe("New Item and Edit Item pages", () => {
                 class="chakra-button emotion-0"
                 type="button"
               >
-                Add
+                Create
               </button>
             </div>
           </div>
@@ -344,180 +303,276 @@ describe("New Item and Edit Item pages", () => {
             type="text"
             value=""
           />
-          <label
+          <div
             class="text-xl font-bold mt-8 mb-4"
           >
             In Product:
-          </label>
+          </div>
           <div
-            class="chakra-radio-group emotion-4"
-            role="radiogroup"
+            class="px-2"
           >
+            <label
+              class="my-2"
+              for="select-existing-products"
+            >
+              Select existing products:
+            </label>
             <div
-              class="chakra-stack emotion-5"
+              class="chakra-stack emotion-4"
+              id="select-existing-products"
             >
               <label
-                class="chakra-radio emotion-6"
+                class="chakra-checkbox emotion-5"
               >
                 <input
-                  checked=""
-                  class="chakra-radio__input"
-                  id="radio-:r1:"
-                  name="select-products"
+                  class="chakra-checkbox__input"
+                  name="inProducts"
                   style="border: 0px; clip: rect(0px, 0px, 0px, 0px); height: 1px; width: 1px; margin: -1px; padding: 0px; overflow: hidden; white-space: nowrap; position: absolute;"
-                  type="radio"
-                  value="1"
+                  type="checkbox"
+                  value="1zLL0gbc2w959Fb41PWlT2"
                 />
                 <span
                   aria-hidden="true"
-                  class="chakra-radio__control emotion-7"
+                  class="chakra-checkbox__control emotion-6"
                 />
                 <span
-                  class="chakra-radio__label emotion-8"
+                  class="chakra-checkbox__label emotion-7"
                 >
-                  Select existing products:
+                  Omnia Oven
                 </span>
               </label>
-              <div
-                class="chakra-select__wrapper emotion-9"
-              >
-                <select
-                  class="chakra-select border-2 emotion-10"
-                  data-testid="products-select"
-                  disabled=""
-                  multiple=""
-                >
-                  <option
-                    value="1zLL0gbc2w959Fb41PWlT2"
-                  >
-                    Omnia Oven
-                  </option>
-                  <option
-                    value="37ac9639-eaa8-4a9f-993a-c2ae13321a36"
-                  >
-                    Omnia Thermometer
-                  </option>
-                  <option
-                    value="4ff5e92d-c0b6-4dec-af57-d87ece9f9770"
-                  >
-                    Omnia Potholder
-                  </option>
-                  <option
-                    value="5333771d-e70e-441d-9079-9d39940f289f"
-                  >
-                    Omnia Mega Kit
-                  </option>
-                  <option
-                    value="HePqRSIKIpzDxf9dhrfHsD"
-                  >
-                    Omnia Silicone Mould
-                  </option>
-                  <option
-                    value="HePqRSIKIpzDxf9dhrfI2d"
-                  >
-                    Omnia Recipe Book
-                  </option>
-                  <option
-                    value="I0y6V1x7qzC608VKmhtenS"
-                  >
-                    Omnia Muffin Ring
-                  </option>
-                  <option
-                    value="I0y6V1x7qzC608VKmhttV4"
-                  >
-                    Omnia Mould Duo
-                  </option>
-                  <option
-                    value="e9a585e3-822b-45b9-aa02-6cf4fdf6fe88"
-                  >
-                    Omnia Stovetop Kit
-                  </option>
-                  <option
-                    value="yhyI8h1QSgFaZW7AprsFP5"
-                  >
-                    Omnia Oven Bag
-                  </option>
-                  <option
-                    value="zz074YFsjUbDP9RwQZRluF"
-                  >
-                    Omnia Baking Rack
-                  </option>
-                </select>
-                <div
-                  class="chakra-select__icon-wrapper emotion-11"
-                  data-disabled=""
-                >
-                  <svg
-                    aria-hidden="true"
-                    class="chakra-select__icon"
-                    focusable="false"
-                    role="presentation"
-                    style="width: 1em; height: 1em; color: currentColor;"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z"
-                      fill="currentColor"
-                    />
-                  </svg>
-                </div>
-              </div>
               <label
-                class="chakra-radio emotion-6"
-                data-checked=""
+                class="chakra-checkbox emotion-5"
               >
                 <input
-                  class="chakra-radio__input"
-                  id="radio-:r2:"
-                  name="new-product"
+                  class="chakra-checkbox__input"
+                  name="inProducts"
                   style="border: 0px; clip: rect(0px, 0px, 0px, 0px); height: 1px; width: 1px; margin: -1px; padding: 0px; overflow: hidden; white-space: nowrap; position: absolute;"
-                  type="radio"
-                  value="2"
+                  type="checkbox"
+                  value="37ac9639-eaa8-4a9f-993a-c2ae13321a36"
                 />
                 <span
                   aria-hidden="true"
-                  class="chakra-radio__control emotion-7"
-                  data-checked=""
+                  class="chakra-checkbox__control emotion-6"
                 />
                 <span
-                  class="chakra-radio__label emotion-8"
-                  data-checked=""
+                  class="chakra-checkbox__label emotion-7"
                 >
-                  Create a new product:
+                  Omnia Thermometer
                 </span>
               </label>
               <label
-                class="chakra-form__label emotion-15"
-                for="product-name"
+                class="chakra-checkbox emotion-5"
               >
-                Product Name
+                <input
+                  class="chakra-checkbox__input"
+                  name="inProducts"
+                  style="border: 0px; clip: rect(0px, 0px, 0px, 0px); height: 1px; width: 1px; margin: -1px; padding: 0px; overflow: hidden; white-space: nowrap; position: absolute;"
+                  type="checkbox"
+                  value="4ff5e92d-c0b6-4dec-af57-d87ece9f9770"
+                />
+                <span
+                  aria-hidden="true"
+                  class="chakra-checkbox__control emotion-6"
+                />
+                <span
+                  class="chakra-checkbox__label emotion-7"
+                >
+                  Omnia Potholder
+                </span>
               </label>
-              <div
-                class="flex item-center"
+              <label
+                class="chakra-checkbox emotion-5"
               >
-                <div
-                  class="flex flex-col w-full"
+                <input
+                  class="chakra-checkbox__input"
+                  name="inProducts"
+                  style="border: 0px; clip: rect(0px, 0px, 0px, 0px); height: 1px; width: 1px; margin: -1px; padding: 0px; overflow: hidden; white-space: nowrap; position: absolute;"
+                  type="checkbox"
+                  value="5333771d-e70e-441d-9079-9d39940f289f"
+                />
+                <span
+                  aria-hidden="true"
+                  class="chakra-checkbox__control emotion-6"
+                />
+                <span
+                  class="chakra-checkbox__label emotion-7"
                 >
-                  <input
-                    class="chakra-input emotion-16"
-                    id="product-name"
-                    name="productName"
-                    type="text"
-                  />
-                  <p
-                    class="text-red-600"
-                    role="alert"
-                  >
-                    Please enter a product name
-                  </p>
-                </div>
-                <button
-                  class="chakra-button emotion-17"
-                  type="button"
+                  Omnia Mega Kit
+                </span>
+              </label>
+              <label
+                class="chakra-checkbox emotion-5"
+              >
+                <input
+                  class="chakra-checkbox__input"
+                  name="inProducts"
+                  style="border: 0px; clip: rect(0px, 0px, 0px, 0px); height: 1px; width: 1px; margin: -1px; padding: 0px; overflow: hidden; white-space: nowrap; position: absolute;"
+                  type="checkbox"
+                  value="HePqRSIKIpzDxf9dhrfHsD"
+                />
+                <span
+                  aria-hidden="true"
+                  class="chakra-checkbox__control emotion-6"
+                />
+                <span
+                  class="chakra-checkbox__label emotion-7"
                 >
-                  Add Product
-                </button>
+                  Omnia Silicone Mould
+                </span>
+              </label>
+              <label
+                class="chakra-checkbox emotion-5"
+              >
+                <input
+                  class="chakra-checkbox__input"
+                  name="inProducts"
+                  style="border: 0px; clip: rect(0px, 0px, 0px, 0px); height: 1px; width: 1px; margin: -1px; padding: 0px; overflow: hidden; white-space: nowrap; position: absolute;"
+                  type="checkbox"
+                  value="HePqRSIKIpzDxf9dhrfI2d"
+                />
+                <span
+                  aria-hidden="true"
+                  class="chakra-checkbox__control emotion-6"
+                />
+                <span
+                  class="chakra-checkbox__label emotion-7"
+                >
+                  Omnia Recipe Book
+                </span>
+              </label>
+              <label
+                class="chakra-checkbox emotion-5"
+              >
+                <input
+                  class="chakra-checkbox__input"
+                  name="inProducts"
+                  style="border: 0px; clip: rect(0px, 0px, 0px, 0px); height: 1px; width: 1px; margin: -1px; padding: 0px; overflow: hidden; white-space: nowrap; position: absolute;"
+                  type="checkbox"
+                  value="I0y6V1x7qzC608VKmhtenS"
+                />
+                <span
+                  aria-hidden="true"
+                  class="chakra-checkbox__control emotion-6"
+                />
+                <span
+                  class="chakra-checkbox__label emotion-7"
+                >
+                  Omnia Muffin Ring
+                </span>
+              </label>
+              <label
+                class="chakra-checkbox emotion-5"
+              >
+                <input
+                  class="chakra-checkbox__input"
+                  name="inProducts"
+                  style="border: 0px; clip: rect(0px, 0px, 0px, 0px); height: 1px; width: 1px; margin: -1px; padding: 0px; overflow: hidden; white-space: nowrap; position: absolute;"
+                  type="checkbox"
+                  value="I0y6V1x7qzC608VKmhttV4"
+                />
+                <span
+                  aria-hidden="true"
+                  class="chakra-checkbox__control emotion-6"
+                />
+                <span
+                  class="chakra-checkbox__label emotion-7"
+                >
+                  Omnia Mould Duo
+                </span>
+              </label>
+              <label
+                class="chakra-checkbox emotion-5"
+              >
+                <input
+                  class="chakra-checkbox__input"
+                  name="inProducts"
+                  style="border: 0px; clip: rect(0px, 0px, 0px, 0px); height: 1px; width: 1px; margin: -1px; padding: 0px; overflow: hidden; white-space: nowrap; position: absolute;"
+                  type="checkbox"
+                  value="e9a585e3-822b-45b9-aa02-6cf4fdf6fe88"
+                />
+                <span
+                  aria-hidden="true"
+                  class="chakra-checkbox__control emotion-6"
+                />
+                <span
+                  class="chakra-checkbox__label emotion-7"
+                >
+                  Omnia Stovetop Kit
+                </span>
+              </label>
+              <label
+                class="chakra-checkbox emotion-5"
+              >
+                <input
+                  class="chakra-checkbox__input"
+                  name="inProducts"
+                  style="border: 0px; clip: rect(0px, 0px, 0px, 0px); height: 1px; width: 1px; margin: -1px; padding: 0px; overflow: hidden; white-space: nowrap; position: absolute;"
+                  type="checkbox"
+                  value="yhyI8h1QSgFaZW7AprsFP5"
+                />
+                <span
+                  aria-hidden="true"
+                  class="chakra-checkbox__control emotion-6"
+                />
+                <span
+                  class="chakra-checkbox__label emotion-7"
+                >
+                  Omnia Oven Bag
+                </span>
+              </label>
+              <label
+                class="chakra-checkbox emotion-5"
+              >
+                <input
+                  class="chakra-checkbox__input"
+                  name="inProducts"
+                  style="border: 0px; clip: rect(0px, 0px, 0px, 0px); height: 1px; width: 1px; margin: -1px; padding: 0px; overflow: hidden; white-space: nowrap; position: absolute;"
+                  type="checkbox"
+                  value="zz074YFsjUbDP9RwQZRluF"
+                />
+                <span
+                  aria-hidden="true"
+                  class="chakra-checkbox__control emotion-6"
+                />
+                <span
+                  class="chakra-checkbox__label emotion-7"
+                >
+                  Omnia Baking Rack
+                </span>
+              </label>
+            </div>
+            <label
+              class="my-2"
+              for="add-new-product"
+            >
+              Add a new product:
+            </label>
+            <div
+              class="flex item-center"
+            >
+              <div
+                class="flex flex-col w-full"
+              >
+                <input
+                  class="chakra-input emotion-38"
+                  id="add-new-product"
+                  name="productName"
+                  type="text"
+                />
+                <p
+                  class="text-red-600"
+                  role="alert"
+                >
+                  Please enter a product name
+                </p>
               </div>
+              <button
+                class="chakra-button emotion-39"
+                type="button"
+              >
+                Add Product
+              </button>
             </div>
           </div>
           <label
@@ -564,7 +619,7 @@ describe("New Item and Edit Item pages", () => {
       </QueryClientProvider>
     );
 
-    await waitForElementToBeRemoved(screen.getByText(/loading/i));
+    await waitForElementToBeRemoved(screen.getByText(/fetching products/i));
 
     const item = {
       name: "Barebones Beacon Light - Antique Bronze",
@@ -574,24 +629,25 @@ describe("New Item and Edit Item pages", () => {
 
     const itemNameInput = await screen.findByLabelText(/item name/i);
     const quantityInput = await screen.findByLabelText(/quantity/i);
-    const inProductSelect = await screen.findByLabelText(/in product/i);
+    const selectProductCheckboxes = await screen.findAllByRole("checkbox");
     const costInput = await screen.findByLabelText(/cost/i);
-    const addBtn = await screen.findByRole("button", { name: /add/i });
+    const createBtn = await screen.findByRole("button", { name: /create/i });
 
-    await act(async () => userEvent.click(addBtn));
+    await userEvent.click(createBtn);
 
-    await waitFor(() => {
+    await waitFor(async () => {
       expect(mockCreateItem).toHaveBeenCalledTimes(0);
       expect(router.push).toHaveBeenCalledTimes(0);
-      expect(screen.getAllByText(/can't be empty/i)).toBeVisible();
-      expect(screen.getByText(/select or create a product/i)).toBeVisible();
+      expect(screen.getAllByText(/can't be empty/i)).toHaveLength(3);
+      expect(screen.getByText(/select one or more products/i)).toBeVisible();
     });
 
     await userEvent.type(itemNameInput, item.name);
     await userEvent.type(quantityInput, item.quantity);
     await userEvent.type(costInput, item.cost);
-    await userEvent.selectOptions(inProductSelect, products[2].name);
-    await act(async () => userEvent.click(addBtn));
+    await userEvent.click(selectProductCheckboxes[0]);
+    expect(selectProductCheckboxes[0]).toBeChecked();
+    await userEvent.click(createBtn);
 
     await waitFor(() => {
       expect(mockCreateItem).toHaveBeenCalledTimes(1);
@@ -610,26 +666,50 @@ describe("New Item and Edit Item pages", () => {
     const queryClient = new QueryClient();
     const router = useRouter();
 
+    mockGetProducts.mockResolvedValueOnce(products);
     mockGetItem.mockResolvedValueOnce([mockItem]);
+
+    const inProducts = [
+      "5333771d-e70e-441d-9079-9d39940f289f",
+      "yhyI8h1QSgFaZW7AprsFP5",
+    ];
 
     // arrange - render UI
     render(
       <QueryClientProvider client={queryClient}>
-        <Item>
-          <ItemForm item={mockItem} />
-        </Item>
+        <Item item={mockItem} inProducts={inProducts} />
       </QueryClientProvider>
     );
 
-    await waitForElementToBeRemoved(screen.getByText(/loading/i));
+    await waitForElementToBeRemoved(screen.getByText(/fetching products/i));
+
+    const context = {
+      query: {
+        itemId: mockItem._id,
+      } as ParsedUrlQuery,
+    };
+
+    const value = await getServerSideProps(
+      context as GetServerSidePropsContext
+    );
+
+    expect(value).toEqual({
+      props: {
+        item: mockItem,
+        inProducts,
+      },
+    });
 
     const updateBtn = await screen.findByRole("button", { name: /update/i });
     const itemNameInput = await screen.findByLabelText(/item name/i);
     const quantityInput = await screen.findByLabelText(/quantity/i);
+    const selectProductCheckboxes = await screen.findAllByRole("checkbox");
     const costInput = await screen.findByLabelText(/cost/i);
 
     expect(itemNameInput).toHaveValue(mockItem.name);
     expect(quantityInput).toHaveValue(String(mockItem.quantity));
+    expect(selectProductCheckboxes[3]).toBeChecked();
+    expect(selectProductCheckboxes[9]).toBeChecked();
     expect(costInput).toHaveValue(mockItem.cost ?? "");
 
     const updatedItem = {
@@ -641,6 +721,8 @@ describe("New Item and Edit Item pages", () => {
     await userEvent.clear(itemNameInput);
     await userEvent.type(itemNameInput, updatedItem.name);
     await userEvent.clear(quantityInput);
+    await userEvent.click(selectProductCheckboxes[9]);
+    await userEvent.click(selectProductCheckboxes[1]);
     await userEvent.type(quantityInput, String(updatedItem.quantity));
     await userEvent.clear(costInput);
     await userEvent.type(costInput, String(updatedItem.cost));
@@ -648,7 +730,7 @@ describe("New Item and Edit Item pages", () => {
     expect(quantityInput).toHaveValue(String(updatedItem.quantity));
     expect(costInput).toHaveValue(String(updatedItem.cost));
 
-    await act(async () => userEvent.click(updateBtn));
+    await userEvent.click(updateBtn);
 
     await waitFor(() => {
       expect(router.push).toHaveBeenCalledTimes(1);
@@ -659,7 +741,6 @@ describe("New Item and Edit Item pages", () => {
         quantity: updatedItem.quantity,
         cost: updatedItem.cost,
         name: updatedItem.name,
-        inProduct: mockItem.inProduct,
       });
     });
   });
