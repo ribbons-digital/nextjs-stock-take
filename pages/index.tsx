@@ -1,10 +1,19 @@
 import { withIronSessionSsr } from "iron-session/next";
 import { sessionOptions } from "lib/session";
 import type { NextPage } from "next";
-import styles from "../styles/Home.module.css";
+import { trpc } from "../utils/trpc";
+// import styles from "../styles/Home.module.css";
 
 const Home: NextPage = () => {
-  return <div className={styles.container}>Home</div>;
+  const hello = trpc.useQuery(["hello", { text: "client" }]);
+  if (!hello.data) {
+    return <div>Loading...</div>;
+  }
+  return (
+    <div>
+      <p>{hello.data.greeting}</p>
+    </div>
+  );
 };
 
 export default Home;
