@@ -1,4 +1,4 @@
-import Product from "@/components/Product";
+import ProductComp from "@/components/Product";
 import {
   Button,
   Table,
@@ -12,27 +12,11 @@ import { withIronSessionSsr } from "iron-session/next";
 import { sessionOptions } from "lib/session";
 import type { NextPage } from "next";
 import { useRouter } from "next/router";
-import { useQuery } from "react-query";
-import { ProductType } from "types";
-import { ProductsResType } from "./api/products";
+import { trpc } from "utils/trpc";
 
 const Products: NextPage = () => {
   const router = useRouter();
-  const { data, error, isLoading } = useQuery<ProductType[]>(
-    "products",
-    async () => {
-      const data = await fetch("http://localhost:3000/api/products");
-      if (!data.ok) {
-        throw new Error("Something went wrong");
-      }
-
-      const json = (await data.json()) as ProductsResType;
-      if (json.error) {
-        throw new Error(json.error);
-      }
-      return json.products;
-    }
-  );
+  const { data, error, isLoading } = trpc.useQuery(["products.products"]);
 
   if (isLoading) return <p>Loading...</p>;
 
@@ -62,7 +46,7 @@ const Products: NextPage = () => {
           </Thead>
           <Tbody>
             {data?.map((product, index) => (
-              <Product products={data} index={index} key={product._id} />
+              <ProductComp products={data} index={index} key={product.id} />
             ))}
           </Tbody>
         </Table>

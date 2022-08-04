@@ -1,26 +1,24 @@
 import { Button, Checkbox, Input, Stack } from "@chakra-ui/react";
+import { Item, Product } from "@prisma/client";
 import { useRouter } from "next/router";
 import React from "react";
 import { useForm } from "react-hook-form";
-import { useMutation, useQuery, useQueryClient } from "react-query";
-import { createItem, updateItem } from "services/sanity/item";
-import {
-  addItemInProduct,
-  createProduct,
-  deleteItemInProduct,
-  getProducts,
-} from "services/sanity/product";
-import { ItemType, ProductType } from "types";
+import { useQueryClient } from "react-query";
+import { trpc } from "utils/trpc";
 
 type ItemFormProps = {
-  item?: ItemType;
+  item?:
+    | (Item & {
+        inProducts: Product[];
+      })
+    | null;
   inProducts?: string[];
 };
 
 type FormData = {
   itemName: string;
   quantity: string;
-  inProducts: string[];
+  inProducts?: string[];
   costPerItem: string;
 };
 
@@ -49,116 +47,74 @@ export default function ItemForm({ item, inProducts }: ItemFormProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const { data, error, isLoading } = useQuery<ProductType[]>("products", () =>
-    getProducts()
-  );
+  const { data, error, isLoading } = trpc.useQuery(["products.products"]);
 
-  const createProductMutation = useMutation(
-    async (productName: string) => {
-      return await createProduct({
-        name: productName,
-      });
+  const createProductMutation = trpc.useMutation(["products.create-product"], {
+    onSuccess: () => {
+      queryClient.invalidateQueries(["products.products"]);
+      reset();
     },
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries("products");
-        reset();
-      },
-    }
-  );
+  });
 
-  const createItemMutaiton = useMutation(
-    async ({
-      itemName,
-      quantity,
-      costPerItem,
-    }: Omit<FormData, "inProducts">) => {
-      return await createItem({
-        name: itemName,
-        quantity,
-        cost: Number(costPerItem),
-      });
+  const createItemMutaiton = trpc.useMutation(["items.create-item"], {
+    onSuccess: (data) => {
+      router.push(data ? `/items/${data.id}` : "/items");
     },
-    {
-      onSuccess: async (data) => {
-        await Promise.all(
-          selectedProducts.map(async (product) => {
-            await addItemInProduct({
-              id: product,
-              itemRef: [
-                {
-                  _type: "reference",
-                  _ref: data._id,
-                },
-              ],
-            });
-          })
-        );
-        router.push(data ? `/items/${data._id}` : "/items");
-      },
-    }
-  );
+  });
 
-  const updateItemMutaiton = useMutation(
-    async ({
-      itemName,
-      quantity,
-      costPerItem,
-    }: Omit<FormData, "inProducts">) => {
-      return await updateItem({
-        id: item?._id as string,
-        name: itemName,
-        quantity: Number(quantity),
-        cost: Number(costPerItem),
-      });
+  const updateItemMutaiton = trpc.useMutation(["items.update-item"], {
+    onSuccess: async () => {
+      // const original = item?.inProducts.map((product) => product.id);
+      // const toRemoveFrom = original?.filter(
+      //   (it) => !selectedProducts.includes(it as string)
+      // );
+      // const toAddTo = selectedProducts.filter(
+      //   (it) => !original?.includes(it)
+      // );
+
+      // if (toRemoveFrom && toRemoveFrom?.length > 0) {
+      //   await Promise.all(
+      //     toRemoveFrom.map(async (product) => {
+      //       const prod = data?.find((p) => p.id === product);
+      //       const index = prod?.items.findIndex((it) => it.id === item?.id);
+      //       await deleteItemInProduct({
+      //         id: product as string,
+      //         index: index as number,
+      //       });
+      //     })
+      //   );
+      // }
+
+      // toAddTo.map(async (product) => {
+      //   await addItemInProduct({
+      //     id: product,
+      //     itemRef: [
+      //       {
+      //         _type: "reference",
+      //         _ref: item?.id as string,
+      //       },
+      //     ],
+      //   });
+      // });
+      router.push("/items");
     },
-    {
-      onSuccess: async () => {
-        const original = item?.inProduct.map((product) => product._id);
-        const toRemoveFrom = original?.filter(
-          (it) => !selectedProducts.includes(it as string)
-        );
-        const toAddTo = selectedProducts.filter(
-          (it) => !original?.includes(it)
-        );
+  });
 
-        if (toRemoveFrom && toRemoveFrom?.length > 0) {
-          await Promise.all(
-            toRemoveFrom.map(async (product) => {
-              const prod = data?.find((p) => p._id === product);
-              const index = prod?.items.findIndex((it) => it._id === item?._id);
-              await deleteItemInProduct({
-                id: product as string,
-                index: index as number,
-              });
-            })
-          );
-        }
-
-        toAddTo.map(async (product) => {
-          await addItemInProduct({
-            id: product,
-            itemRef: [
-              {
-                _type: "reference",
-                _ref: item?._id as string,
-              },
-            ],
-          });
-        });
-        router.push("/items");
-      },
-    }
-  );
+  const deleteItemMutation = trpc.useMutation(["items.delete-item"], {
+    onSuccess: () => {
+      router.push("/items");
+    },
+  });
 
   const onCreateItem = handleSubmit(
     async (formData: Omit<FormData, "inProducts">) => {
       const { itemName, quantity, costPerItem } = formData;
 
       createItemMutaiton.mutate({
-        itemName,
-        quantity,
-        costPerItem,
+        name: itemName,
+        quantity: Number(quantity),
+        cost: Number(costPerItem),
+        inProducts: selectedProducts,
       });
     }
   );
@@ -167,14 +123,22 @@ export default function ItemForm({ item, inProducts }: ItemFormProps) {
     const { itemName, quantity, costPerItem } = formData;
 
     updateItemMutaiton.mutate({
-      itemName,
-      quantity,
-      costPerItem,
+      id: item?.id as string,
+      name: itemName,
+      quantity: Number(quantity),
+      cost: Number(costPerItem),
+      inProducts: selectedProducts,
     });
   });
 
+  const onDeleteItem = () => {
+    if (item) {
+      deleteItemMutation.mutate({ itemId: item.id });
+    }
+  };
+
   const onAddProduct = nestedSubmit(async (nestedFormData: NestedFormData) => {
-    createProductMutation.mutate(nestedFormData.productName);
+    createProductMutation.mutate({ name: nestedFormData.productName });
   });
 
   const onSelectProducts = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -212,14 +176,25 @@ export default function ItemForm({ item, inProducts }: ItemFormProps) {
                 {item ? "Updating..." : "Creating..."}
               </Button>
             ) : (
-              <Button
-                variant="solid"
-                colorScheme="twitter"
-                type="button"
-                onClick={item ? onUpdateItem : onCreateItem}
-              >
-                {item ? "Update" : "Create"}
-              </Button>
+              <>
+                <Button
+                  variant="solid"
+                  colorScheme="twitter"
+                  type="button"
+                  onClick={item ? onUpdateItem : onCreateItem}
+                >
+                  {item ? "Update" : "Create"}
+                </Button>
+                <Button
+                  variant="solid"
+                  colorScheme="red"
+                  type="button"
+                  className="ml-2"
+                  onClick={onDeleteItem}
+                >
+                  Delete
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -264,63 +239,6 @@ export default function ItemForm({ item, inProducts }: ItemFormProps) {
         ) : null}
 
         <div className="text-xl font-bold mt-8 mb-4">In Product:</div>
-        {/* <RadioGroup sx={{ p: 4 }} onChange={setValue} value={value}>
-          <Stack spacing={5} direction="column">
-            <>
-              <Radio value="1" name="select-products">
-                Select existing products:
-              </Radio>
-              {isLoading && <div>Fetching products...</div>}
-              {error && <p>Something is wrong...</p>}
-              {data && (
-                <Select
-                  data-testid="products-select"
-                  sx={{ height: "8rem" }}
-                  multiple
-                  disabled={value !== "1"}
-                  className="border-2"
-                >
-                  {data.map((product) => (
-                    <option key={product._id} value={product._id}>
-                      {product.name}
-                    </option>
-                  ))}
-                </Select>
-              )}
-            </>
-            <>
-              <Radio value="2" name="new-product">
-                Create a new product:
-              </Radio>
-              <FormLabel htmlFor="product-name">Product Name</FormLabel>
-              <div className="flex item-center">
-                <div className="flex flex-col w-full">
-                  <Input
-                    id="product-name"
-                    type="text"
-                    {...nestedRegister("productName", {
-                      required: "Please enter a product name",
-                      disabled: value !== "2",
-                    })}
-                    sx={{ py: 1 }}
-                  />
-                  <p className="text-red-600" role="alert">
-                    {nestedErrors.productName &&
-                      nestedErrors.productName.message}
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  onClick={onAddProduct}
-                  disabled={!isDirty || !isValid}
-                  sx={{ ml: 4 }}
-                >
-                  Add Product
-                </Button>
-              </div>
-            </>
-          </Stack>
-        </RadioGroup> */}
 
         <div className="px-2">
           <>
@@ -346,36 +264,18 @@ export default function ItemForm({ item, inProducts }: ItemFormProps) {
               >
                 {data.map((product) => (
                   <Checkbox
-                    key={product._id}
-                    value={product._id}
+                    key={product.id}
+                    value={product.id}
                     {...register("inProducts", {
                       onChange: onSelectProducts,
                       required: true,
                     })}
-                    isChecked={selectedProducts.includes(product._id as string)}
+                    isChecked={selectedProducts.includes(product.id as string)}
                   >
                     {product.name}
                   </Checkbox>
-                  // <option key={product._id} value={product._id} selected={selectedProducts.some(p => p === product._id)}>
-                  //   {product.name}
-                  // </option>
                 ))}
               </Stack>
-
-              // <Select
-              //   id="select-existing-products"
-              //   sx={{ height: "8rem" }}
-              //   multiple
-              //   className="border-2"
-              //   onChange={onSelectProducts}
-
-              // >
-              //   {data.map((product) => (
-              //     <option key={product._id} value={product._id} selected={selectedProducts.some(p => p === product._id)}>
-              //       {product.name}
-              //     </option>
-              //   ))}
-              // </Select>
             )}
             {errors.inProducts ? (
               <p className="text-red-600" role="alert" id="order-date-error">

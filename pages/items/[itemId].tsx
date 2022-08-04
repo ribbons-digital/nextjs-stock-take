@@ -1,15 +1,19 @@
 import ItemForm from "@/components/ItemForm";
+import { Item, Product } from "@prisma/client";
 import { GetServerSideProps, NextPage } from "next";
-import { getItem } from "services/sanity/item";
-import { ItemType } from "types";
+import { prisma } from "../../utils/prisma";
 
 type PropTypes = {
   //   children: React.ReactNode;
-  item: ItemType;
+  item:
+    | (Item & {
+        inProducts: Product[];
+      })
+    | null;
   inProducts: string[];
 };
 
-const Item: NextPage<PropTypes> = ({ item, inProducts }) => {
+const ItemPage: NextPage<PropTypes> = ({ item, inProducts }) => {
   //   const router = useRouter();
   //   const { itemId } = router.query;
 
@@ -23,21 +27,30 @@ const Item: NextPage<PropTypes> = ({ item, inProducts }) => {
   return <ItemForm item={item} inProducts={inProducts} />;
 };
 
-export default Item;
+export default ItemPage;
 
 export const getServerSideProps: GetServerSideProps = async function ({
   req,
   res,
   query,
 }) {
-  const items = (await getItem(query.itemId as string)) as ItemType[];
+  const item = await prisma.item.findUnique({
+    where: {
+      id: query.itemId as string,
+    },
+    include: {
+      inProducts: true,
+    },
+  });
+  console.log(item);
+
   const inProducts =
-    items[0].inProduct.length === 0
+    item?.inProducts.length === 0
       ? ([] as string[])
-      : items[0].inProduct.map((product) => product._id);
+      : item?.inProducts.map((product) => product.id);
   return {
     props: {
-      item: items[0],
+      item,
       inProducts,
     },
   };

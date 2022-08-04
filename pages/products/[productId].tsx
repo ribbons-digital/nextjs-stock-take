@@ -1,13 +1,11 @@
 import type { GetServerSideProps, NextPage } from "next";
 
 import ProductForm from "@/components/ProductForm";
+import { Item } from "@prisma/client";
 import { withIronSessionSsr } from "iron-session/next";
 import { sessionOptions } from "lib/session";
 import { useRouter } from "next/router";
-import { useQuery } from "react-query";
-import { getItems } from "services/sanity/item";
-import { getProduct } from "services/sanity/product";
-import { ItemType, ProductType } from "types";
+import { trpc } from "utils/trpc";
 
 type PropTypes = {
   children: React.ReactNode;
@@ -16,31 +14,27 @@ type PropTypes = {
 const Product: NextPage<PropTypes> = () => {
   const router = useRouter();
   const { productId } = router.query;
-  const { data, error, isLoading } = useQuery<ProductType[]>(
-    ["product", productId],
-    () => getProduct({ id: productId as string })
-  );
+  const { data, error, isLoading } = trpc.useQuery([
+    "products.single-product",
+    { productId: productId as string },
+  ]);
   const {
     data: items,
     error: itemsError,
     isLoading: itemsLoading,
-  } = useQuery<ItemType[]>(["items"], () => getItems());
+  } = trpc.useQuery(["items.items"]);
   if (isLoading || itemsLoading) return <p>Loading...</p>;
-  if (error || itemsError || data?.length === 0 || items?.length === 0)
+  if (error || itemsError || !data || items?.length === 0)
     return <p>Error: Something is wrong...</p>;
 
   const filteredItems =
-    data![0].items && data![0].items.length > 0
+    data.items && data.items.length > 0
       ? items?.filter(
-          (item: ItemType) =>
-            !data![0].items.some(
-              (pItem: Omit<ItemType, "cost" | "inProduct">) =>
-                pItem._id === item._id
-            )
+          (item: Item) => !data.items.some((pItem) => pItem.id === item.id)
         )
       : items;
-
-  return <ProductForm product={data![0]} items={filteredItems as ItemType[]} />;
+  console.log(filteredItems);
+  return <ProductForm product={data} items={filteredItems as Item[]} />;
 };
 
 export default Product;

@@ -1,36 +1,31 @@
 import { Button, Td, Tr } from "@chakra-ui/react";
-import { useMutation, useQueryClient } from "react-query";
-import { deleteItemInProduct } from "services/sanity/product";
-import { ItemType } from "types";
+import { Item } from "@prisma/client";
+import { useQueryClient } from "react-query";
+import { trpc } from "utils/trpc";
 
 export default function ProductItem({
   items,
   index,
   productId,
 }: {
-  items: Omit<ItemType, "cost" | "inProduct">[];
+  items: Item[];
   index: number;
   productId: string;
 }) {
   const item = items[index];
   const queryClient = useQueryClient();
 
-  const deleteItemFromList = useMutation(
-    ({ itemId }: { itemId: string }) => {
-      const index = items.findIndex(
-        (item: Omit<ItemType, "cost" | "inProduct">) => item._id === itemId
-      );
-      return deleteItemInProduct({ id: productId as string, index });
-    },
+  const deleteItemFromList = trpc.useMutation(
+    ["products.remove-item-from-product"],
     {
       onSuccess: () => {
-        queryClient.invalidateQueries(["product", productId]);
+        queryClient.invalidateQueries(["products.single-product"]);
         // queryClient.invalidateQueries(["items"]);
       },
     }
   );
   return (
-    <Tr key={item._id}>
+    <Tr key={item.id}>
       <Td>{item.name}</Td>
       <Td>{item.quantity}</Td>
       <td>
@@ -44,7 +39,8 @@ export default function ProductItem({
           disabled={deleteItemFromList.isLoading}
           onClick={() =>
             deleteItemFromList.mutate({
-              itemId: item._id as string,
+              itemId: item.id as string,
+              productId: productId as string,
             })
           }
         >

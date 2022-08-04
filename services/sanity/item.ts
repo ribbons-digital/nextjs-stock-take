@@ -1,17 +1,17 @@
 import type { SanityDocumentStub } from "@sanity/client";
-import type { CreateItemParamsType } from "../../types";
+import type { CreateItemParamsType, ItemType } from "../../types";
 
 import { sanity } from "../../lib/sanity-client";
 
 export const getItems = async () => {
   const query =
     '*[_type == "item"]{ _id, _key, name, quantity, cost, "inProduct": *[_type=="product" && references(^._id)]{ _id, name } }';
-  return await sanity.fetch(query);
+  return (await sanity.fetch(query)) as ItemType[];
 };
 
 export const getItem = async (id: string) => {
   const query = `*[_type == "item" && _id == "${id}"]{ _id, _key, name, quantity, cost, "inProduct": *[_type=="product" && references(^._id)]{ _id, name } }`;
-  return await sanity.fetch(query);
+  return (await sanity.fetch(query)) as ItemType[];
 };
 
 export const createItem = async ({

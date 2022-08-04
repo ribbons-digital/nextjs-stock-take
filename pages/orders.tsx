@@ -1,4 +1,4 @@
-import Order from "@/components/Order";
+import OrderComp from "@/components/Order";
 import {
   Button,
   Table,
@@ -12,28 +12,11 @@ import { withIronSessionSsr } from "iron-session/next";
 import { sessionOptions } from "lib/session";
 import type { NextPage } from "next";
 import { useRouter } from "next/router";
-import { useQuery } from "react-query";
-import { OrderType } from "types";
-import { OrdersResType } from "./api/orders";
+import { trpc } from "utils/trpc";
 
 const Orders: NextPage = () => {
   const router = useRouter();
-  const { data, error, isLoading } = useQuery<OrderType[]>(
-    "orders",
-    async () => {
-      const data = await fetch("http://localhost:3000/api/orders");
-
-      if (!data.ok) {
-        throw new Error("Something went wrong");
-      }
-
-      const json = (await data.json()) as OrdersResType;
-      if (json.error) {
-        throw new Error(json.error);
-      }
-      return json.orders;
-    }
-  );
+  const { data, error, isLoading } = trpc.useQuery(["orders.orders"]);
 
   if (isLoading) return <p>Loading...</p>;
 
@@ -62,7 +45,7 @@ const Orders: NextPage = () => {
           </Thead>
           <Tbody>
             {data?.map((order, index) => (
-              <Order orders={data} index={index} key={order._id} />
+              <OrderComp orders={data} index={index} key={order.id} />
             ))}
           </Tbody>
         </Table>

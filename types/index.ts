@@ -42,7 +42,7 @@ export type ItemType = {
   name: string;
   quantity: number;
   cost: number | null;
-  inProduct: Omit<ProductType, "items" | "orders">[];
+  inProducts: Omit<ProductType, "items" | "orders">[];
 };
 
 export type OrderItemType = {

@@ -1,15 +1,18 @@
 import { Input, Td, Tr } from "@chakra-ui/react";
+import { Item, Order, Product } from "@prisma/client";
 import { useRouter } from "next/router";
 import React from "react";
 import { useMutation, useQueryClient } from "react-query";
 import { updateProductItemsQuantity } from "services/sanity/product";
-import { ProductType } from "types";
 
-export default function Product({
+export default function ProductComp({
   products,
   index,
 }: {
-  products: ProductType[];
+  products: (Product & {
+    items: Item[];
+    orders: Order[];
+  })[];
   index: number;
 }) {
   const product = products[index];
@@ -35,13 +38,13 @@ export default function Product({
     }
   );
   return (
-    <Tr key={product._id}>
+    <Tr key={product.id}>
       <Td>
         <button
           type="button"
           name={product.name}
           className="underline underline-offset-1 text-blue-700"
-          onClick={() => router.push(`/products/${product._id}`)}
+          onClick={() => router.push(`/products/${product.id}`)}
         >
           {product.name}
         </button>
@@ -55,7 +58,7 @@ export default function Product({
           type="number"
           ref={inputRef}
           defaultValue={
-            product.items && product.items.length === 1
+            product && product.items.length === 1
               ? product.items[0].quantity
               : "0"
           }
@@ -68,7 +71,7 @@ export default function Product({
             className="underline underline-offset-1 text-blue-700 w-full"
             name="orders"
             type="button"
-            onClick={() => router.push(`/products/${product._id}/orders`)}
+            onClick={() => router.push(`/products/${product.id}/orders`)}
           >
             {product.orders.length}
           </button>
@@ -86,7 +89,7 @@ export default function Product({
             data-testid={`update-quantity-${product.name}`}
             onClick={() =>
               updateProductQuantityMutation.mutate({
-                id: product._id as string,
+                id: product.id as string,
                 qty: Number(inputRef.current?.value),
               })
             }

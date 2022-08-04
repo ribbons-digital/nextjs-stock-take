@@ -22,26 +22,24 @@ import {
   Tr,
   useDisclosure,
 } from "@chakra-ui/react";
+import { Order, OrderedItem, Product } from "@prisma/client";
+import { format } from "date-fns";
 import { useRouter } from "next/router";
 import React from "react";
 import { useForm } from "react-hook-form";
-import { useMutation } from "react-query";
-import { createOrder, deleteOrder, updateOrder } from "services/sanity/order";
-import {
-  OrderItemParamsType,
-  OrderItemType,
-  OrderType,
-  ProductType,
-} from "types";
+import { useQueryClient } from "react-query";
+import { trpc } from "utils/trpc";
 
 type OrderFormProps = {
-  products: ProductType[];
-  order?: OrderType;
+  products: Product[];
+  order?: Order & {
+    orderedItems: OrderedItem[];
+  };
 };
 
 type FormData = {
   orderNumber: string;
-  itemList: OrderItemParamsType[];
+  // itemList: OrderedItem[];
   orderDate: string;
 };
 
@@ -54,8 +52,10 @@ export default function OrderForm({ products, order }: OrderFormProps) {
 
   const { isOpen, onOpen, onClose } = useDisclosure();
 
+  const queryClient = useQueryClient();
+
   // State
-  const [orderItems, setOrderItems] = React.useState<OrderItemType[]>(
+  const [orderItems, setOrderItems] = React.useState<OrderedItem[]>(
     order?.orderedItems ?? []
   );
   const [selectedProductId, setSelectedProductId] = React.useState<string>("");
@@ -78,17 +78,14 @@ export default function OrderForm({ products, order }: OrderFormProps) {
 
   const handleAddOrderItem = () => {
     const orderedItem = products.find(
-      (product) => product._id === selectedProductId
+      (product) => product.id === selectedProductId
     );
 
     const newOrderItem = {
-      orderedItem: {
-        _id: `${orderedItem?._id}.${Date.now()}`,
-        name: orderedItem?.name,
-      },
+      productId: orderedItem?.id,
       quantity: Number(selectedProductQuantity),
       note,
-    } as OrderItemType;
+    } as OrderedItem;
 
     setOrderItems([...orderItems, newOrderItem]);
 
@@ -96,87 +93,99 @@ export default function OrderForm({ products, order }: OrderFormProps) {
     onClose();
   };
 
-  const createOrderMutaiton = useMutation(
-    async ({ orderNumber, itemList, orderDate }: FormData) => {
-      return await createOrder({
-        orderedItems: itemList,
-        orderNumber,
-        date: orderDate,
-      });
+  const createOrderMutation = trpc.useMutation(["orders.create-order"], {
+    onSuccess: (data) => {
+      router.push(data ? `/orders/${data.id}` : "/orders");
     },
-    {
-      onSuccess: (data) => {
-        router.push(data ? `/orders/${data._id}` : "/orders");
-      },
-    }
-  );
+  });
 
-  const updateOrderMutaiton = useMutation(
-    async ({ itemList }: FormData) => {
-      return await updateOrder({
-        orderId: order?._id as string,
-        orderedItems: itemList,
-        orderNumber: order?.orderNumber as string,
-        date: order?.date as string,
-      });
-    },
-    {
-      onSuccess: () => {
-        router.push("/orders");
-      },
-    }
-  );
+  // const createOrderMutaiton = useMutation(
+  //   async ({ orderNumber, itemList, orderDate }: FormData) => {
+  //     return await createOrder({
+  //       orderedItems: itemList,
+  //       orderNumber,
+  //       date: orderDate,
+  //     });
+  //   },
+  //   {
+  //     onSuccess: (data) => {
+  //       router.push(data ? `/orders/${data._id}` : "/orders");
+  //     },
+  //   }
+  // );
 
-  const deleteOrderMutaiton = useMutation(
-    async ({ id }: { id: string }) => {
-      return await deleteOrder({ id });
+  const updateOrderMutaiton = trpc.useMutation(["orders.update-order"], {
+    onSuccess: () => {
+      router.push("/orders");
     },
-    {
-      onSuccess: () => {
-        router.push("/orders");
-      },
-    }
-  );
+  });
+
+  const deleteOrderMutation = trpc.useMutation(["orders.delete-order"], {
+    onSuccess: () => {
+      router.push("/orders");
+    },
+  });
 
   const onCreateOrder = handleSubmit(async (formData: FormData) => {
     const { orderDate, orderNumber } = formData;
-    const itemList = orderItems.map((item) => {
-      return {
-        orderedItem: {
-          _type: "reference",
-          _ref: item.orderedItem._id?.split(".")[0],
-        },
-        quantity: item.quantity,
-      };
-    }) as OrderItemParamsType[];
+    const itemList = orderItems
+      .filter((item) => !order?.orderedItems.includes(item))
+      .map((item) => {
+        return {
+          productId: item.productId,
+          quantity: item.quantity,
+          note: item.note ?? "",
+        };
+      });
 
-    createOrderMutaiton.mutate({
+    createOrderMutation.mutate({
       orderNumber,
-      orderDate,
-      itemList,
+      date: new Date(orderDate),
+      orderedProducts: itemList,
     });
   });
 
-  const onUpdateOrder = handleSubmit(async (formData: FormData) => {
-    const itemList = orderItems.map((item) => {
-      return {
-        orderedItem: {
-          _type: "reference",
-          _ref: item.orderedItem._id?.split(".")[0],
-        },
-        quantity: item.quantity,
-      };
-    }) as OrderItemParamsType[];
+  const onUpdateOrder = handleSubmit(async () => {
+    const orderedItems = orderItems
+      .filter((item) => !order?.orderedItems.includes(item))
+      .map((item) => {
+        return {
+          productId: item.productId,
+          quantity: item.quantity,
+          note: item.note ?? "",
+        };
+      });
 
     updateOrderMutaiton.mutate({
+      id: order?.id as string,
       orderNumber: order?.orderNumber as string,
-      itemList,
-      orderDate: order?.date as string,
+      orderedProducts: orderedItems,
+      date: new Date(order?.date as Date),
     });
   });
 
   const onDeleteOrder = () => {
-    deleteOrderMutaiton.mutate({ id: order?._id as string });
+    deleteOrderMutation.mutate({ orderId: order?.id as string });
+  };
+
+  const deleteProductFromOrderMutation = trpc.useMutation(
+    ["orders.remove-product-from-order"],
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries(["orders.single-order"]);
+      },
+    }
+  );
+
+  const onDeleteProductFromOrder = (productId: string) => {
+    if (order && order.orderedItems.find((item) => item.id === productId)) {
+      deleteProductFromOrderMutation.mutate({
+        id: order.id,
+        productId,
+      });
+    } else {
+      setOrderItems(orderItems.filter((item) => item.id !== productId));
+    }
   };
 
   return (
@@ -187,7 +196,7 @@ export default function OrderForm({ products, order }: OrderFormProps) {
             Go back
           </Button>
           <div>
-            {(createOrderMutaiton.isIdle || updateOrderMutaiton.isIdle) && (
+            {(createOrderMutation.isIdle || updateOrderMutaiton.isIdle) && (
               <Button
                 variant="solid"
                 colorScheme="twitter"
@@ -197,14 +206,14 @@ export default function OrderForm({ products, order }: OrderFormProps) {
                 {order ? "Update" : "Add"}
               </Button>
             )}
-            {(createOrderMutaiton.isLoading ||
+            {(createOrderMutation.isLoading ||
               updateOrderMutaiton.isLoading) && (
               <Button
                 variant="solid"
                 colorScheme="twitter"
                 type="button"
                 disabled={
-                  createOrderMutaiton.isLoading || updateOrderMutaiton.isLoading
+                  createOrderMutation.isLoading || updateOrderMutaiton.isLoading
                 }
               >
                 {order ? "Updating..." : "Adding..."}
@@ -270,7 +279,7 @@ export default function OrderForm({ products, order }: OrderFormProps) {
                 onChange={handleSelectProduct}
               >
                 {products.map((product, i) => (
-                  <option value={product._id} key={product._id}>
+                  <option value={product.id} key={product.id}>
                     {product.name}
                   </option>
                 ))}
@@ -340,14 +349,32 @@ export default function OrderForm({ products, order }: OrderFormProps) {
                 <Th>Product Name</Th>
                 <Th>Quantity</Th>
                 <Th>Note</Th>
+                <Th>Action</Th>
               </Tr>
             </Thead>
             <Tbody>
               {orderItems.map((item, i) => (
-                <Tr key={item.orderedItem._id + i}>
-                  <Td>{item.orderedItem.name}</Td>
+                <Tr key={item.productId + i}>
+                  <Td>
+                    {
+                      products[
+                        products.findIndex(
+                          (p) => (p.id as string) === item.productId
+                        )
+                      ].name
+                    }
+                  </Td>
                   <Td>{item.quantity}</Td>
                   <td role="gridcell">{item.note}</td>
+                  <td role="gridcell">
+                    <Button
+                      variant="contained"
+                      color="red"
+                      onClick={() => onDeleteProductFromOrder(item.id)}
+                    >
+                      Delete
+                    </Button>
+                  </td>
                 </Tr>
               ))}
             </Tbody>
@@ -364,7 +391,7 @@ export default function OrderForm({ products, order }: OrderFormProps) {
             required: Boolean(order) ? undefined : "The field can't be empty",
             disabled: Boolean(order),
           })}
-          defaultValue={order ? order.date : ""}
+          defaultValue={order ? format(order.date, "yyyy-MM-dd") : ""}
           className="border-2"
           aria-invalid={Boolean(errors.orderDate) || undefined}
           aria-describedby={errors.orderDate ? "order-date-error" : undefined}

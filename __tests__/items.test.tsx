@@ -5,11 +5,15 @@ import {
   waitForElementToBeRemoved,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { httpBatchLink } from "@trpc/client/links/httpBatchLink";
+import { loggerLink } from "@trpc/client/links/loggerLink";
 import { mockItems } from "mocks/db";
 import { useRouter } from "next/router";
 import Items from "pages/items";
 import { QueryClient, QueryClientProvider } from "react-query";
 import { getItems, updateItemQuantity } from "services/sanity/item";
+import superjson from "superjson";
+import { trpc } from "utils/trpc";
 import "whatwg-fetch";
 import { server } from "../mocks/server";
 
@@ -59,13 +63,33 @@ const mockUpdateItemQty = updateItemQuantity as jest.MockedFunction<
 >;
 
 describe("Items", () => {
-  test("it should render loading", async () => {
+  test.only("it should render loading", async () => {
     mockGetItems.mockResolvedValueOnce(mockItems);
     const queryClient = new QueryClient();
+    const url = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}/api/trpc`
+      : "http://localhost:3000/api/trpc";
+
+    const links = [
+      loggerLink(),
+      httpBatchLink({
+        maxBatchSize: 10,
+        url,
+      }),
+    ];
+    const trpcClient = trpc.createClient({
+      url: process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}/api/trpc`
+        : "http://localhost:3000/api/trpc",
+      links,
+      transformer: superjson,
+    });
     render(
-      <QueryClientProvider client={queryClient}>
-        <Items />
-      </QueryClientProvider>
+      <trpc.Provider client={trpcClient} queryClient={queryClient}>
+        <QueryClientProvider client={queryClient}>
+          <Items />
+        </QueryClientProvider>
+      </trpc.Provider>
     );
 
     await waitForElementToBeRemoved(() => screen.getByText(/loading/i));

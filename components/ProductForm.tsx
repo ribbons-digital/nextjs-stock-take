@@ -5,16 +5,15 @@ import {
   FormLabel,
   Input,
 } from "@chakra-ui/react";
+import { Item, Order, Product } from "@prisma/client";
 import { useRouter } from "next/router";
 import { useForm } from "react-hook-form";
-import { useMutation } from "react-query";
-import { createProduct, updateProduct } from "services/sanity/product";
-import { ItemType, ProductType } from "types";
+import { trpc } from "utils/trpc";
 import ProductItemList from "./ProductItemList";
 
 type ProductFormProps = {
-  product?: ProductType;
-  items: ItemType[];
+  product?: Product & { items: Item[]; orders: Order[] };
+  items: Item[];
 };
 
 type FormData = {
@@ -29,31 +28,16 @@ export default function ProductForm({ product, items }: ProductFormProps) {
     formState: { errors, isSubmitting },
   } = useForm<FormData>();
 
-  const productMutation = useMutation(
-    async (productName: string) => {
-      const isCreate = !product?._id;
-      if (isCreate) {
-        return await createProduct({
-          name: productName,
-        });
-      } else {
-        await updateProduct({
-          id: product?._id as string,
-          name: productName,
-        });
-      }
+  const productMutation = trpc.useMutation(["products.create-product"], {
+    onSuccess: (data) => {
+      router.push(data ? `/products/${data.id}` : "/products");
     },
-    {
-      onSuccess: (data) => {
-        router.push(data ? `/products/${data._id}` : "/products");
-      },
-    }
-  );
+  });
 
   const onSubmit = handleSubmit(async (formData: FormData) => {
     const { productName } = formData;
 
-    productMutation.mutate(productName);
+    productMutation.mutate({ name: productName });
   });
 
   return (
@@ -68,7 +52,7 @@ export default function ProductForm({ product, items }: ProductFormProps) {
             colorScheme="blue"
             name="submit"
             type="submit"
-            value={product?._id}
+            value={product?.id}
             isLoading={productMutation.isLoading}
             disabled={productMutation.isLoading}
           >
@@ -99,7 +83,7 @@ export default function ProductForm({ product, items }: ProductFormProps) {
             <ProductItemList
               currentProductItems={product?.items ?? []}
               allProductItems={items}
-              productId={product?._id!}
+              product={product}
             />
           </div>
         )}

@@ -11,45 +11,34 @@ import {
   Thead,
   Tr,
 } from "@chakra-ui/react";
+import { Item, Product } from "@prisma/client";
 import React from "react";
-import { useMutation, useQueryClient } from "react-query";
-import { addItemInProduct } from "services/sanity/product";
-import { ItemType } from "types";
+import { useQueryClient } from "react-query";
+import { trpc } from "utils/trpc";
 import ProductItem from "./ProductItem";
 
 type ProductItemListProps = {
-  currentProductItems: Omit<ItemType, "cost" | "inProduct">[];
-  allProductItems: ItemType[];
-  productId: string;
+  currentProductItems: Item[];
+  allProductItems: Item[];
+  product: Product;
 };
 
 export default function ProductItemList({
   currentProductItems,
   allProductItems,
-  productId,
+  product,
 }: ProductItemListProps) {
-  const [items, setItems] =
-    React.useState<Omit<ItemType, "cost" | "inProduct">[]>(currentProductItems);
+  const [items, setItems] = React.useState<Item[]>(currentProductItems);
   const [selectedItemId, setSelectedItemId] = React.useState<string>("");
-
+  const productId = product.id;
   const queryClient = useQueryClient();
 
-  const updateItemListMutation = useMutation(
-    (
-      itemRef: {
-        _type: string;
-        _ref: string;
-      }[]
-    ) => {
-      return addItemInProduct({ id: productId as string, itemRef });
+  const updateItemListMutation = trpc.useMutation(["products.update-product"], {
+    onSuccess: () => {
+      queryClient.invalidateQueries(["products.single-product"]);
+      // trpc.useQuery(["items.items"]);
     },
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries(["product", productId]);
-        queryClient.invalidateQueries(["items"]);
-      },
-    }
-  );
+  });
 
   React.useEffect(() => {
     setItems(currentProductItems);
@@ -74,7 +63,7 @@ export default function ProductItemList({
         >
           <option></option>
           {allProductItems.map((item, i) => (
-            <option value={item._id} key={item._id}>
+            <option value={item.id} key={item.id}>
               {item.name}
             </option>
           ))}
@@ -86,13 +75,11 @@ export default function ProductItemList({
         name="addItem"
         disabled={!selectedItemId || updateItemListMutation.isLoading}
         onClick={() => {
-          const itemRef = [
-            {
-              _type: "reference",
-              _ref: selectedItemId,
-            },
-          ];
-          updateItemListMutation.mutate(itemRef);
+          updateItemListMutation.mutate({
+            id: productId,
+            name: product.name,
+            items: [selectedItemId],
+          });
         }}
       >
         + Add Item

@@ -1,15 +1,14 @@
 import { Button, Input, Td, Tr } from "@chakra-ui/react";
+import { Item } from "@prisma/client";
 import { useRouter } from "next/router";
 import { useForm } from "react-hook-form";
-import { useMutation } from "react-query";
-import { updateItemQuantity } from "services/sanity/item";
-import { ItemType } from "types";
+import { trpc } from "utils/trpc";
 
-export default function Item({
+export default function ItemComp({
   items,
   index,
 }: {
-  items: ItemType[];
+  items: Item[];
   index: number;
 }) {
   const item = items[index];
@@ -20,29 +19,36 @@ export default function Item({
     formState: { errors },
   } = useForm<{ quantity: string }>();
 
-  const updateItemQtyMutation = useMutation(
-    async ({ quantity }: { quantity: string }) => {
-      return await updateItemQuantity({
-        id: item._id as string,
+  const { mutate, error, isLoading } = trpc.useMutation([
+    "items.update-item-quantity",
+  ]);
+
+  // const updateItemQtyMutation = useMutation(
+  //   async ({ quantity }: { quantity: string }) => {
+  //     return await updateItemQuantity({
+  //       id: item._id as string,
+  //       quantity: Number(quantity),
+  //     });
+  //   }
+  // );
+
+  const onUpdateItemQuantity = handleSubmit(
+    ({ quantity }: { quantity: string }) => {
+      mutate({
+        id: item.id as string,
         quantity: Number(quantity),
       });
     }
   );
 
-  const onUpdateItemQuantity = handleSubmit(
-    ({ quantity }: { quantity: string }) => {
-      updateItemQtyMutation.mutate({ quantity });
-    }
-  );
-
   return (
-    <Tr key={item._id}>
+    <Tr key={item.id}>
       <Td>
         <button
           type="button"
           name={item.name}
           className="underline underline-offset-1 text-blue-700"
-          onClick={() => router.push(`/items/${item._id}`)}
+          onClick={() => router.push(`/items/${item.id}`)}
         >
           {item.name}
         </button>
@@ -70,9 +76,11 @@ export default function Item({
           onClick={onUpdateItemQuantity}
           colorScheme="twitter"
         >
-          {updateItemQtyMutation.isLoading ? "Updating..." : "Update"}
+          {isLoading ? "Updating..." : "Update"}
         </Button>
       </td>
+
+      {error && <p>Something went wrong! {error.message}</p>}
     </Tr>
   );
 }
