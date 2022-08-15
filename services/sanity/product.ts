@@ -1,4 +1,5 @@
 import type { SanityDocumentStub } from "@sanity/client";
+import * as Schema from "../../sanity/schema";
 import type {
   CreateProductParamsType,
   ItemsInProductResponseType,
@@ -14,7 +15,7 @@ export const getProducts = async () => {
   // '*[_type == "product"]{ _id, _key, name, quantity, "items": *[_type=="item" && references(^._id)]{ _id, name, quantity }, "orders": *[_type=="order" && references(^._id)]{ _id, orderNumber } }';
   const query =
     '*[_type == "product"]{ _id, name, orders, items[]->{_id, quantity} }';
-  return await sanity.fetch(query);
+  return await sanity.fetch<Schema.Product[]>(query);
 };
 
 export const getProduct = async ({ id }: { id: string }) => {

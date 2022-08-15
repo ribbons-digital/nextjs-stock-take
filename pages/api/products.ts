@@ -2,10 +2,9 @@ import { withIronSessionApiRoute } from "iron-session/next";
 import { sessionOptions } from "lib/session";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getProducts } from "services/sanity/product";
-import { ProductType } from "types";
 
 export type ProductsResType = {
-  products: ProductType[];
+  products: Awaited<ReturnType<typeof getProducts>>;
   error?: string;
 };
 
