@@ -28,7 +28,11 @@ export default function ProductForm({ product, items }: ProductFormProps) {
     formState: { errors, isSubmitting },
   } = useForm<FormData>();
 
-  const productMutation = trpc.useMutation(["products.create-product"], {
+  const mutationType = product
+    ? "products.update-product"
+    : "products.create-product";
+
+  const productMutation = trpc.useMutation([mutationType], {
     onSuccess: (data) => {
       router.push(data ? `/products/${data.id}` : "/products");
     },
@@ -37,7 +41,16 @@ export default function ProductForm({ product, items }: ProductFormProps) {
   const onSubmit = handleSubmit(async (formData: FormData) => {
     const { productName } = formData;
 
-    productMutation.mutate({ name: productName });
+    const mutationParams = product
+      ? {
+          id: product.id,
+          name: productName,
+        }
+      : {
+          name: productName,
+        };
+
+    productMutation.mutate(mutationParams);
   });
 
   return (

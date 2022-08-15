@@ -185,15 +185,17 @@ export default function ItemForm({ item, inProducts }: ItemFormProps) {
                 >
                   {item ? "Update" : "Create"}
                 </Button>
-                <Button
-                  variant="solid"
-                  colorScheme="red"
-                  type="button"
-                  className="ml-2"
-                  onClick={onDeleteItem}
-                >
-                  Delete
-                </Button>
+                {item && (
+                  <Button
+                    variant="solid"
+                    colorScheme="red"
+                    type="button"
+                    className="ml-2"
+                    onClick={onDeleteItem}
+                  >
+                    Delete
+                  </Button>
+                )}
               </>
             )}
           </div>

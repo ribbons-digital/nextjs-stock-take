@@ -33,9 +33,15 @@ export default function ProductItemList({
   const productId = product.id;
   const queryClient = useQueryClient();
 
+  const singleProductQuery = trpc.useQuery([
+    "products.single-product",
+    { productId },
+  ]);
+
   const updateItemListMutation = trpc.useMutation(["products.update-product"], {
     onSuccess: () => {
-      queryClient.invalidateQueries(["products.single-product"]);
+      // queryClient.invalidateQueries(["products.single-product"]);
+      singleProductQuery.refetch();
       // trpc.useQuery(["items.items"]);
     },
   });
